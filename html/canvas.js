@@ -1,3 +1,4 @@
+let imageData
 let imageWidth
 let imageHeight
 let imageCtx
@@ -17,6 +18,7 @@ function convertImgToCanvas () {
   imageWidth = myImgElement.width
   imageHeight = myImgElement.height
   imageCtx = context
+  imageData = imageCtx.getImageData(0, 0, imageWidth, imageHeight)
 
   // only do this once per page
   // then imageCtx.putImageData( pixel, x, y );
@@ -25,7 +27,7 @@ function convertImgToCanvas () {
 }
 
 function getPalette (imageCtx) {
-  const data = imageCtx.getImageData(0, 0, imageWidth, imageHeight).data
+  const data = imageData.data
   const pal = {}
   for (let y = 0; y < imageHeight; y++) {
     for (let x = 0; x < imageWidth; x++) {
@@ -63,22 +65,49 @@ function blackTile (x, y) {
   imageCtx.fillRect(x << 4, y << 4, 16, 16)
 }
 
+function showOneTileUsage(tileToShow, tilemap) {
+  imageCtx.putImageData(imageData, 0, 0)
+  //const widthTile = imageWidth / 16
+  const heightTile = imageHeight / 16
+  for (let tilenb = 0; tilenb < tilemap.length; tilenb++) {
+    const currentTile = tilemap[tilenb]
+    if (currentTile === tileToShow) {
+      const x = parseInt(tilenb / heightTile)
+      const y = tilenb - x * heightTile
+      imageCtx.fillRect(x * 16, y * 16, 16, 16)
+    }
+  }
+}
+
 function go () {
   convertImgToCanvas()
   const palette = getPalette(imageCtx)
   console.log('palette', palette)
-  const tiles = []
+  const tiles = [] // gfx
+  const tilemap = [] // tile numbers
+  const tileUsage = [] //
 
-  for (let x = 0; x < imageWidth >> 4; x++) {
+  for (let x = 0, tileIdx = 0; x < imageWidth >> 4; x++) {
     for (let y = 0; y < imageHeight >> 4; y++) {
       const tilehex = getTileHex(x, y, palette)
       const tileNb = tiles.findIndex(a => a === tilehex)
       if (tileNb === -1) {
         tiles.push(tilehex)
+        tilemap.push(tileIdx)
+        tileUsage[tileIdx++] = 1
       } else {
         blackTile(x, y)
+        tilemap.push(tileNb)
+        tileUsage[tileNb]++
       }
     }
   }
   console.log(`${tiles.length} unique tiles, tilesData=${tiles.length * 128} bytes`)
+  const tilesUsedOnce = tileUsage.filter(a => a === 1)
+  console.log(`${tilesUsedOnce.lenght} tiles used only 1 time`)
+  //console.log(tiles)
+  console.log(tilemap)
+  console.log(tileUsage)
+
+  showOneTileUsage(2, tilemap)
 }
