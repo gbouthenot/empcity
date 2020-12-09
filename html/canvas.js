@@ -9,13 +9,25 @@ class Tilemap {
     this.palette = [] // [ {color:3159149, hex:'"30346d', usage: 234}, ... ]
     this.tilesgfx = [] // [ {img: ImageData, hex: "3315...",usage: 133} ]
     this.tilemap = [] // [ tile index in tilesgfx, ... ]
-  }
 
-  convertImgToCanvas () {
     this.el.canvas = document.getElementById('canvas')
     this.el.palette = document.getElementById('palette')
     this.el.tiles = document.getElementById('tiles')
 
+    this.el.tiles.addEventListener('click', this.clickOnTiles.bind(this))
+  }
+
+  clickOnTiles (e) {
+    let [x, y] = [e.offsetX, e.offsetY]
+    x = Math.floor((x - 1) / 17)
+    y = Math.floor((y - 1) / 17)
+    const tilenb = y * 64 + x
+    if (this.tilesgfx[tilenb]) {
+      this.showOneTileUsage(tilenb)
+    }
+  }
+
+  convertImgToCanvas () {
     const myImgElement = document.getElementById('sourceImg')
     this.el.canvas.width = myImgElement.width
     this.el.canvas.height = myImgElement.height
