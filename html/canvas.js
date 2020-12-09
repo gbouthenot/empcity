@@ -1,26 +1,27 @@
 class Tilemap {
   constructor () {
+    this.el = {}
     this.imageData = null
     this.imageWidth = null
     this.imageHeight = null
     this.imageCtx = null
     this.pixel = null
-    this.palette = null
-    this.tiles = [] // gfx
-    this.tilemap = [] // tile numbers
-    this.tileUsage = [] //
-
+    this.palette = [] // [ {color:3159149, hex:'"30346d', usage: 234}, ... ]
+    this.tilesgfx = [] // [ {img: ImageData, hex: "3315...",usage: 133} ]
+    this.tilemap = [] // [ tile index in tilesgfx, ... ]
   }
 
   convertImgToCanvas () {
-    var myImgElement = document.getElementById('sourceImg')
-    var myCanvasElement = document.createElement('canvas')
-    myCanvasElement.width = myImgElement.width
-    myCanvasElement.height = myImgElement.height
-    var context = myCanvasElement.getContext('2d')
+    this.el.canvas = document.getElementById('canvas')
+    this.el.palette = document.getElementById('palette')
+    this.el.tiles = document.getElementById('tiles')
+
+    const myImgElement = document.getElementById('sourceImg')
+    this.el.canvas.width = myImgElement.width
+    this.el.canvas.height = myImgElement.height
+    const context = this.el.canvas.getContext('2d')
     // context.scale(myCanvasElement.width / myImgElement.width, myCanvasElement.height / myImgElement.height);
     context.drawImage(myImgElement, 0, 0)
-    document.body.appendChild(myCanvasElement)
     myImgElement.remove()
 
     this.imageWidth = myImgElement.width
@@ -34,7 +35,7 @@ class Tilemap {
     this.pixel.data[3] = 255
   }
 
-  getPalette () {
+  extractPalette () {
     const data = this.imageData.data
     const pal = {}
     for (let y = 0; y < this.imageHeight; y++) {
@@ -57,47 +58,81 @@ class Tilemap {
     this.palette = pal2
   }
 
-  getTilemap () {
-    const tiles = this.tiles
+  showPalette () {
+    const div = this.el.palette
+    this.palette.forEach((x, y) => {
+      const txt = `<div class="palcol">${y}: ${x.usage}<br /><span class="tile" style="background-color: #${x.hex};"></span>#${x.hex}</div>`
+      div.innerHTML += txt
+    })
+  }
+
+  /**
+   * build tilesgfx, tilemap
+   */
+  extractTiles () {
+    const tilesgfx = this.tilesgfx
     const tilemap = this.tilemap
-    const tileUsage = this.tileUsage
 
     for (let x = 0, tileIdx = 0; x < this.imageWidth >> 4; x++) {
       for (let y = 0; y < this.imageHeight >> 4; y++) {
-        const tilehex = this.getTileHex(x, y, this.palette)
-        const tileNb = tiles.findIndex(a => a === tilehex)
+        const curTile = this.getTileFromMain(x, y, this.palette)
+        const tileNb = tilesgfx.findIndex(a => a.hex === curTile.hex)
         if (tileNb === -1) {
-          tiles.push(tilehex)
-          tilemap.push(tileIdx)
-          tileUsage[tileIdx++] = 1
+          curTile.usage = 1
+          tilesgfx.push(curTile)
+          tilemap.push(tileIdx++)
         } else {
-          this.blackTile(x, y)
+          // this.blackTile(x, y)
           tilemap.push(tileNb)
-          tileUsage[tileNb]++
+          tilesgfx[tileNb].usage++
         }
       }
     }
   }
 
-  getTileHex (x, y, palette) {
-    const tiledata = this.imageCtx.getImageData(x << 4, y << 4, 16, 16).data
+  showTiles (tilesPerRow = 16) {
+    const canvas = this.el.tiles
+    const ctx = canvas.getContext('2d')
+    const nbrows = Math.ceil(this.tilesgfx.length / tilesPerRow)
+    canvas.width = tilesPerRow * 17 + 2
+    canvas.height = nbrows * 17 + 2
+    ctx.fillStyle = '#ff00ff' // magenta
+    ctx.fillRect(0, 0, canvas.width - 1, canvas.height - 1)
+
+    let curX = 0
+    let curY = 0
+    this.tilesgfx.forEach((x, idx) => {
+      // ctx.fillRect(curX << 3, curY << 3, 16, 16)
+      ctx.putImageData(x.img, curX * 17 + 1, curY * 17 + 1)
+      curX++
+      if (curX === tilesPerRow) {
+        curX = 0
+        curY++
+      }
+    })
+  }
+
+  getTileFromMain (x, y, palette) {
+    const tileimg = this.imageCtx.getImageData(x << 4, y << 4, 16, 16)
     let tilehex = ''
 
     for (let idx = 0; idx < 256 * 4; idx += 4) {
-      const pixIdx = (tiledata[idx] << 16) + (tiledata[idx + 1] << 8) + tiledata[idx + 2]
+      const pixIdx = (tileimg.data[idx] << 16) + (tileimg.data[idx + 1] << 8) + tileimg.data[idx + 2]
       let colidx = palette.findIndex(p => p.color === pixIdx)
       tilehex += colidx.toString(16)
     }
-    return tilehex
+    return { img: tileimg, hex: tilehex }
   }
 
   blackTile (x, y) {
+    this.imageCtx.fillStyle = '#000000'
     this.imageCtx.fillRect(x << 4, y << 4, 16, 16)
   }
 
   showOneTileUsage (tileToShow) {
+    this.imageCtx.fillStyle = '#000000'
     this.imageCtx.putImageData(this.imageData, 0, 0)
-    //const widthTile = this.imageWidth / 16
+    // const widthTile = this.imageWidth / 16
     const heightTile = this.imageHeight / 16
     for (let tilenb = 0; tilenb < this.tilemap.length; tilenb++) {
       const currentTile = this.tilemap[tilenb]
@@ -111,17 +146,17 @@ class Tilemap {
 
   go () {
     this.convertImgToCanvas()
-    this.getPalette()
-    console.log('palette', this.palette)
+    this.extractPalette()
+    this.showPalette()
 
-    this.getTilemap()
-    console.log(`${this.tiles.length} unique tiles, tilesData=${this.tiles.length * 128} bytes`)
-    const tilesUsedOnce = this.tileUsage.filter(a => a === 1)
-    console.log(`${tilesUsedOnce.lenght} tiles used only 1 time`)
-    //console.log(tiles)
-    console.log(this.tilemap)
-    console.log(this.tileUsage)
+    this.extractTiles()
+    this.showTiles(64)
 
-    this.showOneTileUsage(2)
+    console.log(`${this.tilesgfx.length} unique tilesgfx, tilesData=${this.tilesgfx.length * 128} bytes`)
+    const tilesUsedOnce = this.tilesgfx.filter(a => a.usage === 1)
+    console.log(`${tilesUsedOnce.length} tiles used only 1 time:`, tilesUsedOnce)
+    console.log('tilemap:', this.tilemap)
+
+    // this.showOneTileUsage(2)
   }
 }

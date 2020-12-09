@@ -1,7 +1,17 @@
 <!doctype html5>
 <html>
+<head>
+<style>
+.tile { width:16px; height:16px; display: inline-block; }
+#palette { font-family: monospace; }
+#palette .palcol { display: inline-block; }
+</style>
+</head>
 <body>
 <img id="sourceImg" src="empf_db16.gif" />
+<canvas id="canvas"></canvas>
+<div id="palette"></div>
+<canvas id="tiles"></canvas>
 <script type="text/javascript" src="canvas.js"></script>
 <script>
 const tm = new Tilemap()
