@@ -6,6 +6,7 @@
 #palette { font-family: monospace; }
 #palette .palcol { display: inline-block; }
 .ib { display: inline-block; }
+#tilemap { font-family: monospace; }
 #tilemap .prevnext canvas { display: inline-block; }
 #tilemap .prevnext .usage { }
 </style>
@@ -18,8 +19,8 @@
 <div id="tilemap">
   <canvas id="tiles" class="ib" width="0" height="0"></canvas>
   <div class="prevnext ib">
-    <div>curr: <canvas width="32" height="32"><span class="usage"></div>
-    <div>prev: <canvas width="32" height="32"><span class="usage"></div>
+    <div>curr: <canvas width="32" height="32"></canvas><span class="usage"></span></div>
+    <div>prev: <canvas width="32" height="32"></canvas><span class="usage"></span></div>
   </div>
 </div>
 <script type="text/javascript" src="canvas.js"></script>

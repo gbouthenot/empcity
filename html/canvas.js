@@ -15,12 +15,11 @@ class Tilemap {
     this.el.tiles = document.getElementById('tiles')
     this.el.tilesCanvas = document.querySelectorAll('#tilemap .prevnext canvas')
     this.el.tilesUsage = document.querySelectorAll('#tilemap .prevnext .usage')
-    this.el.tilesCanvas.forEach(canvas => {
-      // les canvas sont zoomés sans smoothing pour voir les pixels
-      const ctx = canvas.getContext('2d')
-      ctx.scale(2, 2)
-      ctx.imageSmoothingEnabled = false
-    })
+    // le premier tile canvas est zoomé sans smoothing pour voir les pixels
+    // le deuxième: pas besoin, il est recopié
+    const ctx = this.el.tilesCanvas[0].getContext('2d')
+    ctx.scale(2, 2)
+    ctx.imageSmoothingEnabled = false
 
     this.el.tiles.addEventListener('click', this.clickOnTiles.bind(this))
   }
@@ -32,13 +31,26 @@ class Tilemap {
     const tilenb = y * 64 + x
     const tilegfx = this.tilesgfx[tilenb]
     if (tilegfx) {
+      // montre l'utilisation de ce tile dans l'image principale
       this.showOneTileUsage(tilenb)
-      var newCanvas = document.createElement('canvas')
-      newCanvas.width = 16
-      newCanvas.height = 16
-      newCanvas.getContext('2d').putImageData(tilegfx.img, 0, 0)
+
+      // copie curr -> prev
+
+      this.el.tilesUsage[1].innerText = this.el.tilesUsage[0].innerText
+      this.el.tilesCanvas[1].getContext('2d').drawImage(this.el.tilesCanvas[0], 0, 0)
+
+      // copie le tile dans un canvas temporaire
+      // draw ce canvas temp sur le canvas affiché et zoomé
+      var tmpcanvas = document.createElement('canvas')
+      tmpcanvas.width = 16
+      tmpcanvas.height = 16
+      tmpcanvas.getContext('2d').putImageData(tilegfx.img, 0, 0)
       let ctx = this.el.tilesCanvas[0].getContext('2d')
-      ctx.drawImage(newCanvas, 0, 0)
+      ctx.drawImage(tmpcanvas, 0, 0)
+      this.el.tilesUsage[0].innerText = ` ${tilegfx.usage} times`
+
+      // redraw tileList
+      this.showTiles(64, tilenb)
     }
   }
 
@@ -117,7 +129,7 @@ class Tilemap {
     }
   }
 
-  showTiles (tilesPerRow = 16) {
+  showTiles (tilesPerRow = 16, highlight = null) {
     const canvas = this.el.tiles
     const ctx = canvas.getContext('2d')
     const nbrows = Math.ceil(this.tilesgfx.length / tilesPerRow)
@@ -137,6 +149,14 @@ class Tilemap {
         curY++
       }
     })
+
+    if (highlight >= 0) {
+      const y = Math.floor(highlight / tilesPerRow)
+      const x = highlight - y * tilesPerRow
+      ctx.strokeStyle = '#00ff00' // green
+      ctx.lineWidth = 1
+      ctx.strokeRect(x * 17 + 0.5, y * 17 + 0.5, 17, 17)
+    }
   }
 
   getTileFromMain (x, y, palette) {
