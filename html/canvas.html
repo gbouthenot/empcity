@@ -5,13 +5,23 @@
 .tile { width:16px; height:16px; display: inline-block; }
 #palette { font-family: monospace; }
 #palette .palcol { display: inline-block; }
+.ib { display: inline-block; }
+#tilemap .prevnext canvas { display: inline-block; }
+#tilemap .prevnext .usage { }
 </style>
 </head>
 <body>
 <img id="sourceImg" src="empf_db16.gif" />
-<canvas id="canvas"></canvas>
+<canvas id="canvas" width="0" height="0"></canvas>
 <div id="palette"></div>
-<canvas id="tiles"></canvas>
+
+<div id="tilemap">
+  <canvas id="tiles" class="ib" width="0" height="0"></canvas>
+  <div class="prevnext ib">
+    <div>curr: <canvas width="32" height="32"><span class="usage"></div>
+    <div>prev: <canvas width="32" height="32"><span class="usage"></div>
+  </div>
+</div>
 <script type="text/javascript" src="canvas.js"></script>
 <script>
 const tm = new Tilemap()

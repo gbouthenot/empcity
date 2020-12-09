@@ -13,6 +13,14 @@ class Tilemap {
     this.el.canvas = document.getElementById('canvas')
     this.el.palette = document.getElementById('palette')
     this.el.tiles = document.getElementById('tiles')
+    this.el.tilesCanvas = document.querySelectorAll('#tilemap .prevnext canvas')
+    this.el.tilesUsage = document.querySelectorAll('#tilemap .prevnext .usage')
+    this.el.tilesCanvas.forEach(canvas => {
+      // les canvas sont zoomés sans smoothing pour voir les pixels
+      const ctx = canvas.getContext('2d')
+      ctx.scale(2, 2)
+      ctx.imageSmoothingEnabled = false
+    })
 
     this.el.tiles.addEventListener('click', this.clickOnTiles.bind(this))
   }
@@ -22,8 +30,15 @@ class Tilemap {
     x = Math.floor((x - 1) / 17)
     y = Math.floor((y - 1) / 17)
     const tilenb = y * 64 + x
-    if (this.tilesgfx[tilenb]) {
+    const tilegfx = this.tilesgfx[tilenb]
+    if (tilegfx) {
       this.showOneTileUsage(tilenb)
+      var newCanvas = document.createElement('canvas')
+      newCanvas.width = 16
+      newCanvas.height = 16
+      newCanvas.getContext('2d').putImageData(tilegfx.img, 0, 0)
+      let ctx = this.el.tilesCanvas[0].getContext('2d')
+      ctx.drawImage(newCanvas, 0, 0)
     }
   }
 
