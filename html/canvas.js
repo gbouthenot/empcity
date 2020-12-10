@@ -1,3 +1,4 @@
+/* eslint-env browser */
 class Tilemap {
   constructor () {
     this.el = {}
@@ -262,3 +263,89 @@ class Tilemap {
     console.log('tilemap:', this.tilemap)
   }
 }
+
+
+
+class Ste {
+  /**
+   * return hex string for 16 pixels interleaved on 4 bitplanes
+   * 9939 9999 9999 9399
+   * doit retourner: dffb 0000 2004 ffff
+   */
+  bitplanify (hexrow) {
+    let out = [0, 0, 0, 0]
+    for (let dec = 15; dec >= 0; dec--) {
+      let num = parseInt(hexrow[15 - dec], 16)
+      out[3] |= (num & 1) << dec
+      num >>= 1
+      out[2] |= (num & 1) << dec
+      num >>= 1
+      out[1] |= (num & 1) << dec
+      num >>= 1
+      out[0] |= (num & 1) << dec
+    }
+    out = out.reduce((acc, val) => acc + ('000'  + val.toString(16)).slice(-4), '')
+    return out
+  }
+
+  convertTile (tile) {
+    let out = new Uint16Array()
+    for (let i = 0; i < 16; i++) {
+      let block = tile.hex.slice(i * 16, i * 16 + 16)
+      out += this.bitplanify(block)
+    }
+    return out
+  }
+
+  sendPalette (palette) {
+    let pal = this.convPalette(palette)
+    pal = this.hextobin(pal)
+    this.sendfile('palette.bin', [ pal ])
+  }
+
+  sendTilemap (tilemap) {
+    this.sendfile('tilemap.bin', [ new Uint8Array(tilemap) ])
+  }
+
+  sendTiles (tiles) {
+    let tilesbin = tiles.map(tile => this.convertTile(tile))
+    tilesbin = tilesbin.map(tile => this.hex2bin(tile))
+    this.sendfile('tiles.bin', tilesbin)
+  }
+
+  hex2bin (hex) {
+    return new Uint8Array(hex.match(/../gi).map(a => parseInt(a, 16)))
+  }
+
+  /**
+   * this.sendfile("test.bin", [new Uint8Array([1,2,3])])
+   */
+  sendfile (name, aBytes) {
+    const blob = new Blob(aBytes, { type: 'application/octet-binary' })
+    const anc = document.createElement('a')
+    anc.download = name
+    anc.rel = 'noopener'
+    anc.href = URL.createObjectURL(blob)
+    anc.click()
+    // expire ater 1 minute
+    setTimeout(_ => URL.revokeObjectURL(anc.href), 60E3)
+  }
+
+  /**
+   * transform "d0e0f0" -> "0e7f"
+   */
+  convColor (hex) {
+    const comp8to4Bit = c => (c >> 5) + (((c >> 4) & 1) << 3)
+    const r = comp8to4Bit(parseInt(hex.slice(0, 2), 16))
+    const g = comp8to4Bit(parseInt(hex.slice(2, 4), 16))
+    const b = comp8to4Bit(parseInt(hex.slice(4, 6), 16))
+    return ('000' + ((r << 8) + (g << 4) + b).toString(16)).slice(-4)
+  }
+
+  convPalette (pal) {
+    const stpal = pal.map(col => this.convColor(col.hex))
+    return (stpal.reduce((a, b) => a + b) + "0000000000000000000000000000000000000000").slice(0, 64)
+  }
+}
+
+if (typeof module !== 'undefined') { module.exports = { Tilemap, Ste } }
