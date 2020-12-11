@@ -49,7 +49,7 @@ measure:        move.l  $4ba.w,d1
 
 
 
-drawscreen:     movem.l a4-a6/d6-d7,-(sp)
+drawscreen:     movem.l a3-a6/d6-d7,-(sp)
                 lea     $3f8000,a6
                 lea     tilemap,a5
                 lea     tiles,a4
@@ -60,89 +60,57 @@ drawscreen:     movem.l a4-a6/d6-d7,-(sp)
                 move.b  (a5),d7             ; d7: tile number TODO: this should be .w
                 lea     31(a5),a5           ; a5: next tile horizontaly
                 lsl.w   #7,d7
-                lea     (a4,d7),a3          ; a3: adr of tile
+                lea     (a4,d7.w),a3        ; a3: adr of tile
 
-                move.w  (a3)+,6(a6)
-                move.w  (a3)+,4(a6)
-                move.w  (a3)+,2(a6)
-                move.w  (a3)+,(a6)
-                lea     160(a6),a6        ; next row
-                move.w  (a3)+,6(a6)
-                move.w  (a3)+,4(a6)
-                move.w  (a3)+,2(a6)
-                move.w  (a3)+,(a6)
-                lea     160(a6),a6        ; next row
-                move.w  (a3)+,6(a6)
-                move.w  (a3)+,4(a6)
-                move.w  (a3)+,2(a6)
-                move.w  (a3)+,(a6)
-                lea     160(a6),a6        ; next row
-                move.w  (a3)+,6(a6)
-                move.w  (a3)+,4(a6)
-                move.w  (a3)+,2(a6)
-                move.w  (a3)+,(a6)
-                lea     160(a6),a6        ; next row
-                move.w  (a3)+,6(a6)
-                move.w  (a3)+,4(a6)
-                move.w  (a3)+,2(a6)
-                move.w  (a3)+,(a6)
-                lea     160(a6),a6        ; next row
-                move.w  (a3)+,6(a6)
-                move.w  (a3)+,4(a6)
-                move.w  (a3)+,2(a6)
-                move.w  (a3)+,(a6)
-                lea     160(a6),a6        ; next row
-                move.w  (a3)+,6(a6)
-                move.w  (a3)+,4(a6)
-                move.w  (a3)+,2(a6)
-                move.w  (a3)+,(a6)
-                lea     160(a6),a6        ; next row
-                move.w  (a3)+,6(a6)
-                move.w  (a3)+,4(a6)
-                move.w  (a3)+,2(a6)
-                move.w  (a3)+,(a6)
-                lea     160(a6),a6        ; next row
-                move.w  (a3)+,6(a6)
-                move.w  (a3)+,4(a6)
-                move.w  (a3)+,2(a6)
-                move.w  (a3)+,(a6)
-                lea     160(a6),a6        ; next row
-                move.w  (a3)+,6(a6)
-                move.w  (a3)+,4(a6)
-                move.w  (a3)+,2(a6)
-                move.w  (a3)+,(a6)
-                lea     160(a6),a6        ; next row
-                move.w  (a3)+,6(a6)
-                move.w  (a3)+,4(a6)
-                move.w  (a3)+,2(a6)
-                move.w  (a3)+,(a6)
-                lea     160(a6),a6        ; next row
-                move.w  (a3)+,6(a6)
-                move.w  (a3)+,4(a6)
-                move.w  (a3)+,2(a6)
-                move.w  (a3)+,(a6)
-                lea     160(a6),a6        ; next row
-                move.w  (a3)+,6(a6)
-                move.w  (a3)+,4(a6)
-                move.w  (a3)+,2(a6)
-                move.w  (a3)+,(a6)
-                lea     160(a6),a6        ; next row
-                move.w  (a3)+,6(a6)
-                move.w  (a3)+,4(a6)
-                move.w  (a3)+,2(a6)
-                move.w  (a3)+,(a6)
-                lea     160(a6),a6        ; next row
-                move.w  (a3)+,6(a6)
-                move.w  (a3)+,4(a6)
-                move.w  (a3)+,2(a6)
-                move.w  (a3)+,(a6)
-                lea     160(a6),a6        ; next row
-                move.w  (a3)+,6(a6)
-                move.w  (a3)+,4(a6)
-                move.w  (a3)+,2(a6)
-                move.w  (a3)+,(a6)
+                move.l  (a3)+,(a6)+
+                move.l  (a3)+,(a6)
+                lea     160-4(a6),a6        ; next row
+                move.l  (a3)+,(a6)+
+                move.l  (a3)+,(a6)
+                lea     160-4(a6),a6        ; next row
+                move.l  (a3)+,(a6)+
+                move.l  (a3)+,(a6)
+                lea     160-4(a6),a6        ; next row
+                move.l  (a3)+,(a6)+
+                move.l  (a3)+,(a6)
+                lea     160-4(a6),a6        ; next row
+                move.l  (a3)+,(a6)+
+                move.l  (a3)+,(a6)
+                lea     160-4(a6),a6        ; next row
+                move.l  (a3)+,(a6)+
+                move.l  (a3)+,(a6)
+                lea     160-4(a6),a6        ; next row
+                move.l  (a3)+,(a6)+
+                move.l  (a3)+,(a6)
+                lea     160-4(a6),a6        ; next row
+                move.l  (a3)+,(a6)+
+                move.l  (a3)+,(a6)
+                lea     160-4(a6),a6        ; next row
+                move.l  (a3)+,(a6)+
+                move.l  (a3)+,(a6)
+                lea     160-4(a6),a6        ; next row
+                move.l  (a3)+,(a6)+
+                move.l  (a3)+,(a6)
+                lea     160-4(a6),a6        ; next row
+                move.l  (a3)+,(a6)+
+                move.l  (a3)+,(a6)
+                lea     160-4(a6),a6        ; next row
+                move.l  (a3)+,(a6)+
+                move.l  (a3)+,(a6)
+                lea     160-4(a6),a6        ; next row
+                move.l  (a3)+,(a6)+
+                move.l  (a3)+,(a6)
+                lea     160-4(a6),a6        ; next row
+                move.l  (a3)+,(a6)+
+                move.l  (a3)+,(a6)
+                lea     160-4(a6),a6        ; next row
+                move.l  (a3)+,(a6)+
+                move.l  (a3)+,(a6)
+                lea     160-4(a6),a6        ; next row
+                move.l  (a3)+,(a6)+
+                move.l  (a3)+,(a6)
 
-                lea     -15*160+8(a6),a6    ; return to top of tile, but next horizontal tile
+                lea     -15*160+4(a6),a6    ; return to top of tile, but next horizontal tile
                 dbra    d6,.nxtline
 
                 lea     -20*31+1(a5),a5             ; tilemap: return to beginning of row and move down 1 tile
@@ -151,7 +119,7 @@ drawscreen:     movem.l a4-a6/d6-d7,-(sp)
                 subq.w  #1,d7
                 bne     .nxtrow
 
-                movem.l (sp)+,a4-a6/d6-d7
+                movem.l (sp)+,a3-a6/d6-d7
                 rts
 
 

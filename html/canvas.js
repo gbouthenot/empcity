@@ -276,13 +276,13 @@ class Ste {
     let out = [0, 0, 0, 0]
     for (let dec = 15; dec >= 0; dec--) {
       let num = parseInt(hexrow[15 - dec], 16)
-      out[3] |= (num & 1) << dec
-      num >>= 1
-      out[2] |= (num & 1) << dec
+      out[0] |= (num & 1) << dec
       num >>= 1
       out[1] |= (num & 1) << dec
       num >>= 1
-      out[0] |= (num & 1) << dec
+      out[2] |= (num & 1) << dec
+      num >>= 1
+      out[3] |= (num & 1) << dec
     }
     out = out.reduce((acc, val) => acc + ('000'  + val.toString(16)).slice(-4), '')
     return out
