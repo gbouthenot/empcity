@@ -19,7 +19,13 @@ main:
                 move.w  (a6),(a5)+          ; save resolution
                 clr.w   (a6)                ; set low resolution
 
-                bsr     testfill1
+measure:        move.l  $4ba.w,d1
+                moveq   #99,d0
+.d1:            bsr     drawscreen
+                dbf     d0,.d1
+                move.l  $4ba.w,d2
+                sub.l   d1,d2
+
 
                 move.w  #7,-(sp)
                 trap    #1
@@ -43,12 +49,14 @@ main:
 
 
 
-testfill1:      lea     $3f8000,a6
+drawscreen:     movem.l a4-a6/d6-d7,-(sp)
+                lea     $3f8000,a6
                 lea     tilemap,a5
                 lea     tiles,a4
-
+                moveq   #12,d7              ; 12 rows (192 pixels height)
+.nxtrow:        move.w  d7,-(sp)
                 moveq   #20-1,d6            ; show 20 blocks (320 pixels wide)
-.copytile:      moveq   #0,d7
+.nxtline:       moveq   #0,d7
                 move.b  (a5),d7             ; d7: tile number TODO: this should be .w
                 lea     31(a5),a5           ; a5: next tile horizontaly
                 lsl.w   #7,d7
@@ -134,8 +142,16 @@ testfill1:      lea     $3f8000,a6
                 move.w  (a3)+,2(a6)
                 move.w  (a3)+,(a6)
 
-                lea     -15*160+8(a6),a6
-                dbra    d6,.copytile
+                lea     -15*160+8(a6),a6    ; return to top of tile, but next horizontal tile
+                dbra    d6,.nxtline
+
+                lea     -20*31+1(a5),a5             ; tilemap: return to beginning of row and move down 1 tile
+                lea     15*160(a6),a6               ; screen: one block down
+                move.w  (sp)+,d7
+                subq.w  #1,d7
+                bne     .nxtrow
+
+                movem.l (sp)+,a4-a6/d6-d7
                 rts
 
 
