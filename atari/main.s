@@ -49,87 +49,76 @@ measure:        move.l  $4ba.w,d1
 
 
 
-drawscreen:     movem.l a0-a6/d0-d7,-(sp)
+drawscreen:     movem.l a3-a6/d6-d7,-(sp)
                 lea     $3f8000,a6
                 lea     tilemap,a5
+                lea     tiles,a4
                 moveq   #12,d7              ; 12 rows (192 pixels height)
 .nxtrow:        move.w  d7,-(sp)
-                moveq   #20,d7              ; show 20 blocks (320 pixels wide)
-.nxtline:       move.w  d7,-(sp)
-                moveq   #0,d7
-                move.b  (a5),d7             ; d7: tile number TODO: this should be .w
-                lea     31(a5),a5           ; a5: next tile horizontaly
+                moveq   #20-1,d6            ; show 20 blocks (320 pixels wide)
+.nxtline:       moveq   #0,d7
+                move.b  (a5)+,d7            ; d7: tile number TODO: this should be .w / a5: next tile horizontaly
                 lsl.w   #7,d7
-                lea     tiles,a3
-                lea     (a3,d7.w),a3        ; a3: adr of tile ; TODO adda ?
+                lea     (a4,d7.w),a3        ; a3: adr of tile
 
-;a3: tile (source)
-;a5: current tilemap
-;a6: screen (dest)
-
-                movem.l (a3)+,d0-d7/a0-a2/a4
-                move.l  d0,(a6)+
-                move.l  d1,(a6)
+                move.l  (a3)+,(a6)+
+                move.l  (a3)+,(a6)
                 lea     160-4(a6),a6        ; next row
-                move.l  d2,(a6)+
-                move.l  d3,(a6)
+                move.l  (a3)+,(a6)+
+                move.l  (a3)+,(a6)
                 lea     160-4(a6),a6        ; next row
-                move.l  d4,(a6)+
-                move.l  d5,(a6)
+                move.l  (a3)+,(a6)+
+                move.l  (a3)+,(a6)
                 lea     160-4(a6),a6        ; next row
-                move.l  d6,(a6)+
-                move.l  d7,(a6)
+                move.l  (a3)+,(a6)+
+                move.l  (a3)+,(a6)
                 lea     160-4(a6),a6        ; next row
-                move.l  a0,(a6)+
-                move.l  a1,(a6)
+                move.l  (a3)+,(a6)+
+                move.l  (a3)+,(a6)
                 lea     160-4(a6),a6        ; next row
-                move.l  a2,(a6)+
-                move.l  a4,(a6)
+                move.l  (a3)+,(a6)+
+                move.l  (a3)+,(a6)
                 lea     160-4(a6),a6        ; next row
-                movem.l (a3)+,d0-d7/a0-a2/a4
-                move.l  d0,(a6)+
-                move.l  d1,(a6)
+                move.l  (a3)+,(a6)+
+                move.l  (a3)+,(a6)
                 lea     160-4(a6),a6        ; next row
-                move.l  d2,(a6)+
-                move.l  d3,(a6)
+                move.l  (a3)+,(a6)+
+                move.l  (a3)+,(a6)
                 lea     160-4(a6),a6        ; next row
-                move.l  d4,(a6)+
-                move.l  d5,(a6)
+                move.l  (a3)+,(a6)+
+                move.l  (a3)+,(a6)
                 lea     160-4(a6),a6        ; next row
-                move.l  d6,(a6)+
-                move.l  d7,(a6)
+                move.l  (a3)+,(a6)+
+                move.l  (a3)+,(a6)
                 lea     160-4(a6),a6        ; next row
-                move.l  a0,(a6)+
-                move.l  a1,(a6)
+                move.l  (a3)+,(a6)+
+                move.l  (a3)+,(a6)
                 lea     160-4(a6),a6        ; next row
-                move.l  a2,(a6)+
-                move.l  a4,(a6)
+                move.l  (a3)+,(a6)+
+                move.l  (a3)+,(a6)
                 lea     160-4(a6),a6        ; next row
-                movem.l (a3)+,d0-d7
-                move.l  d0,(a6)+
-                move.l  d1,(a6)
+                move.l  (a3)+,(a6)+
+                move.l  (a3)+,(a6)
                 lea     160-4(a6),a6        ; next row
-                move.l  d2,(a6)+
-                move.l  d3,(a6)
+                move.l  (a3)+,(a6)+
+                move.l  (a3)+,(a6)
                 lea     160-4(a6),a6        ; next row
-                move.l  d4,(a6)+
-                move.l  d5,(a6)
+                move.l  (a3)+,(a6)+
+                move.l  (a3)+,(a6)
                 lea     160-4(a6),a6        ; next row
-                move.l  d6,(a6)+
-                move.l  d7,(a6)
+                move.l  (a3)+,(a6)+
+                move.l  (a3)+,(a6)
 
                 lea     -15*160+4(a6),a6    ; return to top of tile, but next horizontal tile
-                move.w  (sp)+,d7
-                subq.w  #1,d7
-                bne     .nxtline
+                dbra    d6,.nxtline
 
-                lea     -20*31+1(a5),a5             ; tilemap: return to beginning of row and move down 1 tile
+                lea     -20+121(a5),a5              ; tilemap: return to beginning of row and move down 1 tile
                 lea     15*160(a6),a6               ; screen: one block down
                 move.w  (sp)+,d7
                 subq.w  #1,d7
                 bne     .nxtrow
 
-                movem.l (sp)+,a0-a6/d0-d7
+                movem.l (sp)+,a3-a6/d6-d7
                 rts
 
 

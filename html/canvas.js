@@ -34,7 +34,7 @@ class Tilemap {
    * show where this tile is used in the image
    */
   clickOnImage (e) {
-    const clickedTile = (e.offsetY >> 4) + (e.offsetX >> 4) * (this.imageHeight + 1 >> 4)
+    const clickedTile = (e.offsetX >> 4) + (e.offsetY >> 4) * (this.imageWidth + 1 >> 4)
     const tilenb = this.tilemap[clickedTile]
     // show where it is used is the main image
     this.selectTile(tilenb)
@@ -168,12 +168,12 @@ class Tilemap {
   showTileUsage (tileToShow) {
     this.imageCtx.fillStyle = '#000000'
     this.imageCtx.putImageData(this.imageData, 0, 0)
-    const heightTile = this.imageHeight / 16
+    const widthTile = this.imageWidth / 16
     for (let tilenb = 0; tilenb < this.tilemap.length; tilenb++) {
       const currentTile = this.tilemap[tilenb]
       if (currentTile === tileToShow) {
-        const x = parseInt(tilenb / heightTile)
-        const y = tilenb - x * heightTile
+        const y = parseInt(tilenb / widthTile)
+        const x = tilenb - y * widthTile
         // paint it black
         this.imageCtx.fillRect(x * 16, y * 16, 16, 16)
       }
@@ -190,8 +190,8 @@ class Tilemap {
     const tilesgfx = this.tilesgfx
     const tilemap = this.tilemap
 
-    for (let x = 0, tileIdx = 0; x < this.imageWidth >> 4; x++) {
-      for (let y = 0; y < this.imageHeight >> 4; y++) {
+    for (let y = 0, tileIdx = 0; y < this.imageHeight >> 4; y++) {
+      for (let x = 0; x < this.imageWidth >> 4; x++) {
         const curTile = this.extractTile(x, y, this.palette)
         const tileNb = tilesgfx.findIndex(a => a.hex === curTile.hex)
         if (tileNb === -1) {
