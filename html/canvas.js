@@ -299,7 +299,7 @@ class Ste {
 
   sendPalette (palette) {
     let pal = this.convPalette(palette)
-    pal = this.hextobin(pal)
+    pal = this.hex2bin(pal)
     this.sendfile('palette.bin', [ pal ])
   }
 
