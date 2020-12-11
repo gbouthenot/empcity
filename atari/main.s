@@ -134,15 +134,15 @@ testfill1:      lea     $3f8000,a6
                 move.w  (a3)+,2(a6)
                 move.w  (a3)+,(a6)
 
-                lea     -15*160-8(a6),a6
+                lea     -15*160+8(a6),a6
                 dbra    d6,.copytile
                 rts
 
 
                 SECTION DATA
-palette:        incbin  palette.bin
-tiles:          incbin  tiles.bin
-tilemap:        incbin  tilemap.bin
+palette:        incbin  rsc/palette.bin
+tiles:          incbin  rsc/tiles.bin
+tilemap:        incbin  rsc/tilemap.bin
 
                 SECTION BSS
 userstack:      ds.l    1
