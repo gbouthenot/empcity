@@ -71,37 +71,25 @@ drawscreen:     movem.l a0-a6/d0-d7,-(sp)
 ;a5: current tilemap
 ;a6: screen (dest)
 
-                REPT    5
-                movem.l (a3)+,d0-d3/a0/a1
-                movem.l (a4)+,d4-d7/a2
-                move.l  d0,(a6)+            ; row 0
-                move.l  d1,(a6)+
-                move.l  d4,(a6)+
-                move.l  d5,(a6)
-                lea     160-12(a6),a6
-                move.l  d2,(a6)+            ; row 1
-                move.l  d3,(a6)+
-                move.l  d6,(a6)+
-                move.l  d7,(a6)
-                lea     160-12(a6),a6
-                move.l  a0,(a6)+            ; row 2
-                move.l  a1,(a6)+
-                move.l  a2,(a6)+
+                REPT    15
+                move.l  (a3)+,(a6)+
+                move.l  (a3)+,(a6)+
+                move.l  (a4)+,(a6)+
                 move.l  (a4)+,(a6)
                 lea     160-12(a6),a6
                 ENDR
 
-                move.l  (a3)+,(a6)+         ; row 15
+                move.l  (a3)+,(a6)+
                 move.l  (a3),(a6)+
                 move.l  (a4)+,(a6)+
                 move.l  (a4),(a6)
 
-                lea     -15*160+4(a6),a6    ; return to top of tile, but next block
+                lea     -15*160+4(a6),a6            ; return to top of tile, but next block
                 move.w  (sp)+,d7
                 subq.w  #1,d7
                 bne     .nxtline
 
-                lea     -20+121(a5),a5             ; tilemap: return to beginning of row and move down 1 tile
+                lea     -20+121(a5),a5              ; tilemap: return to beginning of row and move down 1 tile
                 lea     15*160(a6),a6               ; screen: one block down
                 move.w  (sp)+,d7
                 subq.w  #1,d7
