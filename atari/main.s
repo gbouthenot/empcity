@@ -80,26 +80,28 @@ drawscreen:     movem.l a0-a6/d0-d7,-(sp)
 ;a6: screen (dest)
 
                 REPT    15
-                move.l  (a4)+,(a6)+
-                move.l  (a4)+,(a6)+
-                move.l  (a3)+,(a6)+
-                move.l  (a3)+,(a6)+
-                move.l  (a2)+,(a6)+
-                move.l  (a2)+,(a6)+
-                move.l  (a1)+,(a6)+
-                move.l  (a1)+,(a6)
-                lea     160-32+4(a6),a6
+                move.l  (a4)+,d0
+                move.l  (a4)+,d1
+                move.l  (a3)+,d2
+                move.l  (a3)+,d3
+                move.l  (a2)+,d4
+                move.l  (a2)+,d5
+                move.l  (a1)+,d6
+                move.l  (a1)+,d7
+                movem.l d0-d7,(a6)
+                lea     160(a6),a6
                 ENDR
-                move.l  (a4)+,(a6)+
-                move.l  (a4),(a6)+
-                move.l  (a3)+,(a6)+
-                move.l  (a3),(a6)+
-                move.l  (a2)+,(a6)+
-                move.l  (a2),(a6)+
-                move.l  (a1)+,(a6)+
-                move.l  (a1),(a6)
-
-                lea     -15*160+4(a6),a6            ; return to top of tile, but next block
+                move.l  (a4)+,d0
+                move.l  (a4),d1
+                move.l  (a3)+,d2
+                move.l  (a3),d3
+                move.l  (a2)+,d4
+                move.l  (a2),d5
+                move.l  (a1)+,d6
+                move.l  (a1),d7
+                movem.l d0-d7,(a6)
+ 
+                lea     -15*160+32(a6),a6            ; return to top of tile, but next block
                 move.w  (sp)+,d7
                 subq.w  #1,d7
                 bne     .nxtline
