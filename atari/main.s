@@ -72,9 +72,10 @@ drawscreen:     movem.l a0-a6/d0-d7,-(sp)
 
 
                 suba.w  d0,a5
-                moveq   #20,d7               ; 12 horizontal blocks (320 pixels height)
+                moveq   #20,d7              ; 12 horizontal blocks (320 pixels height)
 .nxtrow:        move.w  d7,-(sp)
-                moveq   #12,d7               ; show 1*12=12 vertical blocks (192 pixels wide)
+                moveq   #12,d7              ; show 1*12=12 vertical blocks (192 pixels wide)
+                move.l  a6,$32(a0)          ; dest adr
 .nxtline:       move.w  d7,-(sp)
 
                 moveq   #0,d7
@@ -88,18 +89,15 @@ drawscreen:     movem.l a0-a6/d0-d7,-(sp)
 ;a6: screen (dest)
 
                 move.l  a3,$24(a0)          ; source adr
-                move.l  a6,$32(a0)          ; dest adr
                 move.w  #16,$38(a0)         ; yCount=16
                 move.b  #$c0,$3c(a0)        ; BUSY / HOG / smudge
-
-                lea     16*160(a6),a6
 
                 move.w  (sp)+,d7
                 subq.w  #1,d7
                 bne     .nxtline
 
-                lea     -12+31(a5),a5               ; tilemap: return to beginning of row and move down 1 tile
-                lea     -192*160+8(a6),a6               ; screen: one block down
+                lea     -12+31(a5),a5       ; tilemap: return to beginning of column and move right 1 tile
+                addq.l  #8(a6),a6           ; next column
                 move.w  (sp)+,d7
                 subq.w  #1,d7
                 bne     .nxtrow
