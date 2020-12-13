@@ -52,7 +52,23 @@ measure:        move.l  $4ba.w,d1
 drawscreen:     movem.l a0-a6/d0-d7,-(sp)
                 lea     $3f8000,a6
                 lea     tilemap+99,a5
+
+                ; blit init
                 lea     $ff8a00,a0          ; a0: Blitter
+                move.w  #2,$20(a0)          ; source x incr
+                move.w  #2,$22(a0)          ; source y incr
+                move.w  #2,$2e(a0)          ; dest x incr
+                move.w  #160-6,$30(a0)      ; dest y incr
+                moveq   #-1,d7
+                move.w  d7,$28(a0)          ; endmask 1
+                move.w  d7,$2a(a0)          ; endmask 2
+                move.w  d7,$2c(a0)          ; endmask 3
+                move.b  #0,$3d(a0)          ; skew / nfsr / fxsr
+                move.b  #3,$3b(a0)          ; op = source
+                move.b  #2,$3a(a0)          ; hop: source
+
+
+
                 suba.w  d0,a5
                 moveq   #12,d7              ; 12 rows (192 pixels height)
 .nxtrow:        move.w  d7,-(sp)
@@ -65,25 +81,13 @@ drawscreen:     movem.l a0-a6/d0-d7,-(sp)
                 lsl.w   #7,d7
                 lea     (a4,d7.w),a4        ; a3: adr of tile ; TODO adda ?
 
-;a3: tile (source)
-;a4: tile+1 (source)
+;a4: tile (source)
 ;a5: current tilemap
 ;a6: screen (dest)
 
                 move.l  a4,$24(a0)          ; source adr
-                move.w  #2,$20(a0)          ; source x incr
-                move.w  #2,$22(a0)          ; source y incr
                 move.l  a6,$32(a0)          ; dest adr
-                move.w  #2,$2e(a0)          ; dest x incr
-                move.w  #160-6,$30(a0)      ; dest y incr
-                moveq   #-1,d7
-                move.w  d7,$28(a0)          ; endmask 1
-                move.w  d7,$2a(a0)          ; endmask 2
-                move.w  d7,$2c(a0)          ; endmask 3
                 move.l  #$40010,$36(a0)     ; xCount = 4; yCount=16
-                move.b  #0,$3d(a0)          ; skew / nfsr / fxsr
-                move.b  #3,$3b(a0)          ; op = source
-                move.b  #2,$3a(a0)          ; hop: source
                 move.b  #$c0,$3c(a0)        ; BUSY / HOG / smudge
 
                 addq.l  #8,a6
