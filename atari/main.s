@@ -52,6 +52,7 @@ measure:        move.l  $4ba.w,d1
 drawscreen:     movem.l a0-a6/d0-d7,-(sp)
                 lea     $3f8000,a6
                 lea     tilemap+99,a5
+                lea     tiles,a4
 
                 ; blit init
                 lea     $ff8a00,a0          ; a0: Blitter
@@ -63,6 +64,7 @@ drawscreen:     movem.l a0-a6/d0-d7,-(sp)
                 move.w  d7,$28(a0)          ; endmask 1
                 move.w  d7,$2a(a0)          ; endmask 2
                 move.w  d7,$2c(a0)          ; endmask 3
+                move.w  #4,$36(a0)          ; xCount=4
                 move.b  #0,$3d(a0)          ; skew / nfsr / fxsr
                 move.b  #3,$3b(a0)          ; op = source
                 move.b  #2,$3a(a0)          ; hop: source
@@ -75,19 +77,19 @@ drawscreen:     movem.l a0-a6/d0-d7,-(sp)
                 moveq   #20,d7               ; show 20*1=20 blocks (320 pixels wide)
 .nxtline:       move.w  d7,-(sp)
 
-                lea     tiles,a4
                 moveq   #0,d7
                 move.b  (a5)+,d7            ; d7: tile number TODO: this should be .w / a5: next tile horizontaly
                 lsl.w   #7,d7
-                lea     (a4,d7.w),a4        ; a3: adr of tile ; TODO adda ?
+                lea     (a4,d7.w),a3        ; a3: adr of tile ; TODO adda ?
 
-;a4: tile (source)
-;a5: current tilemap
+;a3: source tile
+;a4: tiles (fixed)
+;a5: tilemap (current)
 ;a6: screen (dest)
 
-                move.l  a4,$24(a0)          ; source adr
+                move.l  a3,$24(a0)          ; source adr
                 move.l  a6,$32(a0)          ; dest adr
-                move.l  #$40010,$36(a0)     ; xCount = 4; yCount=16
+                move.w  #16,$38(a0)         ; yCount=16
                 move.b  #$c0,$3c(a0)        ; BUSY / HOG / smudge
 
                 addq.l  #8,a6
