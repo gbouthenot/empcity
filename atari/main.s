@@ -55,29 +55,25 @@ drawscreen:     movem.l a0-a6/d0-d7,-(sp)
                 suba.w  d0,a5
                 moveq   #12,d7              ; 12 rows (192 pixels height)
 .nxtrow:        move.w  d7,-(sp)
-                moveq   #4,d7              ; show 4*5=20 blocks (320 pixels wide)
+                moveq   #5,d7              ; show 4*5=20 blocks (320 pixels wide)
 .nxtline:       move.w  d7,-(sp)
-                lea     tiles,a0
+                lea     tiles,a1
                 moveq   #0,d7
                 move.b  (a5)+,d7            ; d7: tile number TODO: this should be .w / a5: next tile horizontaly
                 lsl.w   #7,d7
-                lea     (a0,d7.w),a4        ; a4: tile 1
+                lea     (a1,d7.w),a4        ; a3: adr of tile ; TODO adda ?
                 moveq   #0,d7
-                move.b  (a5)+,d7
+                move.b  (a5)+,d7            ; d6: next file
                 lsl.w   #7,d7
-                lea     (a0,d7.w),a3        ; a3: tile 2
+                lea     (a1,d7.w),a3        ; a4: next tile
                 moveq   #0,d7
-                move.b  (a5)+,d7
+                move.b  (a5)+,d7            ; d6: next file
                 lsl.w   #7,d7
-                lea     (a0,d7.w),a2        ; a2: tile 3
+                lea     (a1,d7.w),a2        ; a4: next tile
                 moveq   #0,d7
-                move.b  (a5)+,d7
+                move.b  (a5)+,d7            ; d6: next file
                 lsl.w   #7,d7
-                lea     (a0,d7.w),a1        ; a1: tile 4
-                moveq   #0,d7
-                move.b  (a5)+,d7
-                lsl.w   #7,d7
-                lea     (a0,d7.w),a0        ; a0: tile 5
+                lea     (a1,d7.w),a1        ; a4: next tile
 
 ;a3: tile (source)
 ;a4: tile+1 (source)
@@ -92,10 +88,8 @@ drawscreen:     movem.l a0-a6/d0-d7,-(sp)
                 move.l  (a2)+,(a6)+
                 move.l  (a2)+,(a6)+
                 move.l  (a1)+,(a6)+
-                move.l  (a1)+,(a6)+
-                move.l  (a0)+,(a6)+
-                move.l  (a0)+,(a6)
-                lea     160-5*8+4(a6),a6
+                move.l  (a1)+,(a6)
+                lea     160-32+4(a6),a6
                 ENDR
                 move.l  (a4)+,(a6)+
                 move.l  (a4),(a6)+
@@ -104,9 +98,7 @@ drawscreen:     movem.l a0-a6/d0-d7,-(sp)
                 move.l  (a2)+,(a6)+
                 move.l  (a2),(a6)+
                 move.l  (a1)+,(a6)+
-                move.l  (a1),(a6)+
-                move.l  (a0)+,(a6)+
-                move.l  (a0),(a6)
+                move.l  (a1),(a6)
 
                 lea     -15*160+4(a6),a6            ; return to top of tile, but next block
                 move.w  (sp)+,d7
