@@ -72,13 +72,13 @@ drawscreen:     movem.l a0-a6/d0-d7,-(sp)
 
 
                 suba.w  d0,a5
-                moveq   #12,d7              ; 12 rows (192 pixels height)
+                moveq   #20,d7               ; 12 horizontal blocks (320 pixels height)
 .nxtrow:        move.w  d7,-(sp)
-                moveq   #20,d7               ; show 20*1=20 blocks (320 pixels wide)
+                moveq   #12,d7               ; show 1*12=12 vertical blocks (192 pixels wide)
 .nxtline:       move.w  d7,-(sp)
 
                 moveq   #0,d7
-                move.b  (a5)+,d7            ; d7: tile number TODO: this should be .w / a5: next tile horizontaly
+                move.b  (a5)+,d7            ; d7: tile number TODO: this should be .w / a5: next tile vertically
                 lsl.w   #7,d7
                 lea     (a4,d7.w),a3        ; a3: adr of tile ; TODO adda ?
 
@@ -92,14 +92,14 @@ drawscreen:     movem.l a0-a6/d0-d7,-(sp)
                 move.w  #16,$38(a0)         ; yCount=16
                 move.b  #$c0,$3c(a0)        ; BUSY / HOG / smudge
 
-                addq.l  #8,a6
+                lea     16*160(a6),a6
 
                 move.w  (sp)+,d7
                 subq.w  #1,d7
                 bne     .nxtline
 
-                lea     -20+121(a5),a5              ; tilemap: return to beginning of row and move down 1 tile
-                lea     15*160(a6),a6               ; screen: one block down
+                lea     -12+31(a5),a5               ; tilemap: return to beginning of row and move down 1 tile
+                lea     -192*160+8(a6),a6               ; screen: one block down
                 move.w  (sp)+,d7
                 subq.w  #1,d7
                 bne     .nxtrow
@@ -110,8 +110,8 @@ drawscreen:     movem.l a0-a6/d0-d7,-(sp)
 
                 SECTION DATA
 palette:        incbin  rsc/palette.bin
-tiles:          incbin  rsc/tiles.bin
-tilemap:        incbin  rsc/tilemap.bin
+tiles:          incbin  rsc/tiles_h.bin
+tilemap:        incbin  rsc/tilemap_h.bin
 
                 SECTION BSS
 userstack:      ds.l    1
