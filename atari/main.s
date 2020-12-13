@@ -52,55 +52,42 @@ measure:        move.l  $4ba.w,d1
 drawscreen:     movem.l a0-a6/d0-d7,-(sp)
                 lea     $3f8000,a6
                 lea     tilemap+99,a5
+                lea     $ff8a00,a0          ; a0: Blitter
                 suba.w  d0,a5
                 moveq   #12,d7              ; 12 rows (192 pixels height)
 .nxtrow:        move.w  d7,-(sp)
-                moveq   #5,d7              ; show 4*5=20 blocks (320 pixels wide)
+                moveq   #20,d7               ; show 20*1=20 blocks (320 pixels wide)
 .nxtline:       move.w  d7,-(sp)
-                lea     tiles,a1
+
+                lea     tiles,a4
                 moveq   #0,d7
                 move.b  (a5)+,d7            ; d7: tile number TODO: this should be .w / a5: next tile horizontaly
                 lsl.w   #7,d7
-                lea     (a1,d7.w),a4        ; a3: adr of tile ; TODO adda ?
-                moveq   #0,d7
-                move.b  (a5)+,d7            ; d6: next file
-                lsl.w   #7,d7
-                lea     (a1,d7.w),a3        ; a4: next tile
-                moveq   #0,d7
-                move.b  (a5)+,d7            ; d6: next file
-                lsl.w   #7,d7
-                lea     (a1,d7.w),a2        ; a4: next tile
-                moveq   #0,d7
-                move.b  (a5)+,d7            ; d6: next file
-                lsl.w   #7,d7
-                lea     (a1,d7.w),a1        ; a4: next tile
+                lea     (a4,d7.w),a4        ; a3: adr of tile ; TODO adda ?
 
 ;a3: tile (source)
 ;a4: tile+1 (source)
 ;a5: current tilemap
 ;a6: screen (dest)
 
-                REPT    15
-                move.l  (a4)+,(a6)+
-                move.l  (a4)+,(a6)+
-                move.l  (a3)+,(a6)+
-                move.l  (a3)+,(a6)+
-                move.l  (a2)+,(a6)+
-                move.l  (a2)+,(a6)+
-                move.l  (a1)+,(a6)+
-                move.l  (a1)+,(a6)
-                lea     160-32+4(a6),a6
-                ENDR
-                move.l  (a4)+,(a6)+
-                move.l  (a4),(a6)+
-                move.l  (a3)+,(a6)+
-                move.l  (a3),(a6)+
-                move.l  (a2)+,(a6)+
-                move.l  (a2),(a6)+
-                move.l  (a1)+,(a6)+
-                move.l  (a1),(a6)
+                move.l  a4,$24(a0)          ; source adr
+                move.w  #2,$20(a0)          ; source x incr
+                move.w  #2,$22(a0)          ; source y incr
+                move.l  a6,$32(a0)          ; dest adr
+                move.w  #2,$2e(a0)          ; dest x incr
+                move.w  #160-6,$30(a0)      ; dest y incr
+                moveq   #-1,d7
+                move.w  d7,$28(a0)          ; endmask 1
+                move.w  d7,$2a(a0)          ; endmask 2
+                move.w  d7,$2c(a0)          ; endmask 3
+                move.l  #$40010,$36(a0)     ; xCount = 4; yCount=16
+                move.b  #0,$3d(a0)          ; skew / nfsr / fxsr
+                move.b  #3,$3b(a0)          ; op = source
+                move.b  #2,$3a(a0)          ; hop: source
+                move.b  #$c0,$3c(a0)        ; BUSY / HOG / smudge
 
-                lea     -15*160+4(a6),a6            ; return to top of tile, but next block
+                addq.l  #8,a6
+
                 move.w  (sp)+,d7
                 subq.w  #1,d7
                 bne     .nxtline
