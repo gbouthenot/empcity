@@ -72,35 +72,31 @@ drawscreen:     movem.l a0-a6/d0-d7,-(sp)
 
 
                 suba.w  d0,a5
-                moveq   #20,d7              ; 12 horizontal blocks (320 pixels height)
-.nxtrow:        move.w  d7,-(sp)
-                moveq   #12,d7              ; show 1*12=12 vertical blocks (192 pixels wide)
+                moveq   #20,d7              ; draw 20 columns
+.nxtcol:        move.w  d7,-(sp)
                 move.l  a6,$32(a0)          ; dest adr
-.nxtline:       move.w  d7,-(sp)
 
-                moveq   #0,d7
-                move.b  (a5)+,d7            ; d7: tile number TODO: this should be .w / a5: next tile vertically
-                lsl.w   #7,d7
-                lea     (a4,d7.w),a3        ; a3: adr of tile ; TODO adda ?
 
 ;a3: source tile
 ;a4: tiles (fixed)
 ;a5: tilemap (current)
 ;a6: screen (dest)
 
+                REPT    12
+                moveq   #0,d7
+                move.b  (a5)+,d7            ; d7: tile number TODO: this should be .w / a5: next tile vertically
+                lsl.w   #7,d7
+                lea     (a4,d7.w),a3        ; a3: adr of tile ; TODO adda ?
                 move.l  a3,$24(a0)          ; source adr
                 move.w  #16,$38(a0)         ; yCount=16
                 move.b  #$c0,$3c(a0)        ; BUSY / HOG / smudge
-
-                move.w  (sp)+,d7
-                subq.w  #1,d7
-                bne     .nxtline
+                ENDR
 
                 lea     -12+31(a5),a5       ; tilemap: return to beginning of column and move right 1 tile
                 addq.l  #8(a6),a6           ; next column
                 move.w  (sp)+,d7
                 subq.w  #1,d7
-                bne     .nxtrow
+                bne     .nxtcol
 
                 movem.l (sp)+,a0-a6/d0-d7
                 rts
