@@ -1,7 +1,7 @@
                 mc68000
 LINEBYTES       EQU     160
 
-main:
+main:           bsr preTilemap
 
                 clr.l   -(sp)       ;SUP_SET
                 move.w  #$20,-(sp)  ;Super()
@@ -52,7 +52,7 @@ measure:        move.l  $4ba.w,d1
 
 drawscreen:     movem.l a0-a6/d0-d7,-(sp)
                 lea     $3f8000,a6
-                lea     tilemap+99,a5
+                lea     tilemapPre+99*4,a5
                 lea     tiles,a4
 
                 ; blit init
@@ -66,6 +66,9 @@ drawscreen:     movem.l a0-a6/d0-d7,-(sp)
                 move.l  #($203<<16)+0,$3a(a0)  ; hop: source / op = source / (skew / nfsr / fxsr)
 
                 suba.w  d0,a5
+                suba.w  d0,a5
+                suba.w  d0,a5
+                suba.w  d0,a5
                 moveq   #20,d7              ; draw 20 columns
 .nxtcol:        move.w  d7,-(sp)
                 move.l  a6,$32(a0)          ; dest adr
@@ -78,15 +81,12 @@ drawscreen:     movem.l a0-a6/d0-d7,-(sp)
 
                 REPT    12
                 moveq   #0,d7
-                move.b  (a5)+,d7            ; d7: tile number TODO: this should be .w / a5: next tile vertically
-                lsl.w   #7,d7
-                lea     (a4,d7.w),a3        ; a3: adr of tile ; TODO adda ?
-                move.l  a3,$24(a0)          ; source adr
+                move.l  (a5)+,$24(a0)            ; d7: tile number TODO: this should be .w / a5: next tile vertically
                 move.w  #16,$38(a0)         ; yCount=16
                 move.b  #$c0,$3c(a0)        ; BUSY / HOG / smudge
                 ENDR
 
-                lea     -12+31(a5),a5       ; tilemap: return to beginning of column and move right 1 tile
+                lea     (-12+31)*4(a5),a5       ; tilemap: return to beginning of column and move right 1 tile
                 addq.l  #8(a6),a6           ; next column
                 move.w  (sp)+,d7
                 subq.w  #1,d7
@@ -95,12 +95,27 @@ drawscreen:     movem.l a0-a6/d0-d7,-(sp)
                 movem.l (sp)+,a0-a6/d0-d7
                 rts
 
+preTilemap:     lea     tilemap,a0
+                lea     tilemapPre,a1
+                lea     tiles(pc),a2
+                move.w  #tilemap_end-tilemap-1,d1
+.loop           moveq   #0,d0
+                move.b  (a0)+,d0
+                lsl.w   #7,d0
+                add.l   a2,d0
+                move.l  d0,(a1)+
+                dbra    d1,.loop
+                rts
+
 
                 SECTION DATA
 palette:        incbin  rsc/palette.bin
 tiles:          incbin  rsc/tiles_h.bin
 tilemap:        incbin  rsc/tilemap_h.bin
+tilemap_end:    *
 
                 SECTION BSS
 userstack:      ds.l    1
 oldpal:         ds.w    16
+                ds.w    1       ; res
+tilemapPre:     ds.b    (tilemap_end-tilemap)*4
