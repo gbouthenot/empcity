@@ -63,31 +63,30 @@ drawscreen:     movem.l a0-a6/d0-d7,-(sp)
                 move.l  d7,$28(a0)          ; endmask 1 / 2
                 move.w  d7,$2c(a0)          ; endmask 3
                 move.w  #4,$36(a0)          ; xCount=4 : copy 4 words = 4 bitplanes
-                move.l  #($203<<16)+0,$3a(a0)  ; hop: source / op = source / (skew / nfsr / fxsr)
+                move.l  #($203<<16)+0,$3a(a0)  ; hop: source / op = source / (linenumber, smudge,hog)/ (skew / nfsr / fxsr)
 
                 suba.w  d0,a5
                 suba.w  d0,a5
                 suba.w  d0,a5
-                suba.w  d0,a5
-                moveq   #20,d7              ; draw 20 columns
+                suba.w  d0,a5                   ; a5: next tile in tilemap
+
+                moveq   #20,d7                  ; draw 20 columns
 .nxtcol:        move.w  d7,-(sp)
-                move.l  a6,$32(a0)          ; dest adr
 
-
-;a3: source tile
-;a4: tiles (fixed)
 ;a5: tilemap (current)
 ;a6: screen (dest)
+;a0: blitter base
+
+                move.l  a6,$32(a0)              ; dest adr
 
                 REPT    12
-                moveq   #0,d7
-                move.l  (a5)+,$24(a0)            ; d7: tile number TODO: this should be .w / a5: next tile vertically
-                move.w  #16,$38(a0)         ; yCount=16
-                move.b  #$c0,$3c(a0)        ; BUSY / HOG / smudge
+                move.l  (a5)+,$24(a0)           ; d7: tile number / a5: next tile vertically
+                move.w  #16,$38(a0)             ; yCount=16
+                move.b  #$c0,$3c(a0)            ; BUSY / HOG / smudge
                 ENDR
 
                 lea     (-12+31)*4(a5),a5       ; tilemap: return to beginning of column and move right 1 tile
-                addq.l  #8(a6),a6           ; next column
+                addq.l  #8(a6),a6               ; next column
                 move.w  (sp)+,d7
                 subq.w  #1,d7
                 bne     .nxtcol
