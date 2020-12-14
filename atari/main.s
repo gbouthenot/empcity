@@ -1,6 +1,9 @@
                 mc68000
 LINEBYTES       EQU     160
 
+;$ff820f: line offset in words
+;$ff8265: pixel shift
+
 main:           bsr preTilemap
 
                 clr.l   -(sp)       ;SUP_SET
@@ -84,11 +87,38 @@ drawscreen:     movem.l a0-a6/d0-d7,-(sp)
 
                 move.l  a6,$32(a0)              ; dest adr
 
-                REPT    12
-                move.l  (a5)+,(a1)              ; set source address / a5: next tile vertically
-                move.w  d0,(a2)                 ; yCount=16
-                move.b  d1,(a3)                 ; BUSY / HOG / smudge
+                REPT    2
+                movem.l (a5)+,d2-d7
+                ;REPT    12
+                ;move.l  (a5)+,(a1)              ; set source address / a5: next tile vertically
+                ;move.w  d0,(a2)                 ; yCount=16
+                ;move.b  d1,(a3)                 ; BUSY / HOG / smudge
+                ;ENDR
+                move.l  d2,(a1)
+                move.w  d0,(a2)
+                move.b  d1,(a3)
+
+                move.l  d3,(a1)
+                move.w  d0,(a2)
+                move.b  d1,(a3)
+
+                move.l  d4,(a1)
+                move.w  d0,(a2)
+                move.b  d1,(a3)
+
+                move.l  d5,(a1)
+                move.w  d0,(a2)
+                move.b  d1,(a3)
+
+                move.l  d6,(a1)
+                move.w  d0,(a2)
+                move.b  d1,(a3)
+
+                move.l  d7,(a1)
+                move.w  d0,(a2)
+                move.b  d1,(a3)
                 ENDR
+
 
                 lea     (-12+31)*4(a5),a5       ; tilemap: return to beginning of column and move right 1 tile
                 addq.l  #8,a6                   ; next column
