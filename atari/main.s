@@ -1,4 +1,5 @@
                 mc68000
+LINEBYTES       EQU     160
 
 main:
 
@@ -56,20 +57,13 @@ drawscreen:     movem.l a0-a6/d0-d7,-(sp)
 
                 ; blit init
                 lea     $ff8a00,a0          ; a0: Blitter
-                move.w  #2,$20(a0)          ; source x incr
-                move.w  #2,$22(a0)          ; source y incr
-                move.w  #2,$2e(a0)          ; dest x incr
-                move.w  #160-6,$30(a0)      ; dest y incr
+                move.l  #$20002,$20(a0)      ; src x / y incr
+                move.l  #(2<<16)+LINEBYTES-6,$2e(a0)   ; dest x / y incr
                 moveq   #-1,d7
-                move.w  d7,$28(a0)          ; endmask 1
-                move.w  d7,$2a(a0)          ; endmask 2
+                move.l  d7,$28(a0)          ; endmask 1 / 2
                 move.w  d7,$2c(a0)          ; endmask 3
-                move.w  #4,$36(a0)          ; xCount=4
-                move.b  #0,$3d(a0)          ; skew / nfsr / fxsr
-                move.b  #3,$3b(a0)          ; op = source
-                move.b  #2,$3a(a0)          ; hop: source
-
-
+                move.w  #4,$36(a0)          ; xCount=4 : copy 4 words = 4 bitplanes
+                move.l  #($203<<16)+0,$3a(a0)  ; hop: source / op = source / (skew / nfsr / fxsr)
 
                 suba.w  d0,a5
                 moveq   #20,d7              ; draw 20 columns
