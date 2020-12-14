@@ -74,6 +74,8 @@ drawscreen:     movem.l a0-a6/d0-d7,-(sp)
                 lea     $24(a0),a1
                 lea     $38(a0),a2
                 lea     $3c(a0),a3
+                moveq   #16,d0                  ; yCount=16
+                moveq   #-$40,d1                ; $c0: BUSY / HOG / smudge
 .nxtcol:        move.w  d7,-(sp)
 
 ;a5: tilemap (current)
@@ -83,9 +85,9 @@ drawscreen:     movem.l a0-a6/d0-d7,-(sp)
                 move.l  a6,$32(a0)              ; dest adr
 
                 REPT    12
-                move.l  (a5)+,(a1)              ; d7: tile number / a5: next tile vertically
-                move.w  #16,(a2)                ; yCount=16
-                move.b  #$c0,(a3)               ; BUSY / HOG / smudge
+                move.l  (a5)+,(a1)              ; set source address / a5: next tile vertically
+                move.w  d0,(a2)                 ; yCount=16
+                move.b  d1,(a3)                 ; BUSY / HOG / smudge
                 ENDR
 
                 lea     (-12+31)*4(a5),a5       ; tilemap: return to beginning of column and move right 1 tile
