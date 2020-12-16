@@ -1,5 +1,5 @@
                 mc68000
-LINEBYTES       EQU     160
+LINEBYTES       EQU     168
 
 ;$ff820f: line offset in words
 ;$ff8265: pixel shift
@@ -22,18 +22,43 @@ main:           bsr preTilemap
                 dbra    d0,.savpal
                 move.w  (a6),(a5)+          ; save resolution
                 clr.w   (a6)                ; set low resolution
+                move.b  #4,$ffff820f.w      ; line width = 168 bytes
 
 measure:        move.l  $4ba.w,d1
-                moveq   #99,d0
-.d1:            bsr     drawscreen
-                dbf     d0,.d1
-                move.l  $4ba.w,d2
-                sub.l   d1,d2
 
+                moveq   #0,d7               ; d7: x coord (0-1616)
+.d1:            move.w  d7,d6
+                and.w   #$fff0,d6
+                lsr.w   #4,d6
+                mulu    #31,d6
+                add.l   d6,d6
+                add.l   d6,d6
+                lea     tilemapPre,a5
+                adda.l  d6,a5
+
+                bsr     drawscreen
+
+                move.w  d7,d6
+                and.w   #$f,d6
+                beq     .zerodec
+                clr.b   $ffff820f.w         ; linewidth
+                move.b  d6,$ffff8265.w      ; pixel shift
+                bra.s   .bothdec
+.zerodec:       move.b  #4,$ffff820f.w      ; linewidth
+                clr.b   $ffff8265.w         ; pixel shift
+.bothdec:       addq.w  #1,d7
+                cmp.w   #1616,d7
+                ble.s   .d1
+
+                move.l  $4ba.w,d2               ; measure: end
+                sub.l   d1,d2
 
                 move.w  #7,-(sp)
                 trap    #1
                 addq.l  #2,sp
+
+                clr.b   $ffff820f.w             ; reset low byte
+                move.b  #1,$ffff8265.w          ; reset pixel shift
 
                 ; restore palette
                 lea     $ff8240,a6
@@ -41,6 +66,8 @@ measure:        move.l  $4ba.w,d1
                 moveq   #17-1,d0
 .restpal:       move.w  (a5)+,(a6)+
                 dbra    d0,.restpal
+                clr.b   $ffff8265.w         ; no pixel shift
+                clr.b   $ffff820f.w         ; line width = 160 bytes
 
                 ;return to user mode
                 move.l  userstack,-(sp)    ;stack
@@ -53,9 +80,9 @@ measure:        move.l  $4ba.w,d1
 
 
 
+; a5: tilemapPre
 drawscreen:     movem.l a0-a6/d0-d7,-(sp)
                 lea     $3f8000,a6
-                lea     tilemapPre+99*4,a5
                 lea     tiles,a4
 
                 ; blit init
@@ -68,12 +95,7 @@ drawscreen:     movem.l a0-a6/d0-d7,-(sp)
                 move.w  #4,$36(a0)          ; xCount=4 : copy 4 words = 4 bitplanes
                 move.l  #($203<<16)+0,$3a(a0)  ; hop: source / op = source / (linenumber, smudge,hog)/ (skew / nfsr / fxsr)
 
-                suba.w  d0,a5
-                suba.w  d0,a5
-                suba.w  d0,a5
-                suba.w  d0,a5                   ; a5: next tile in tilemap
-
-                moveq   #20,d7                  ; draw 20 columns
+                moveq   #21,d7                  ; draw 21 columns (336 pixels)
                 lea     $24(a0),a1
                 lea     $38(a0),a2
                 lea     $3c(a0),a3
