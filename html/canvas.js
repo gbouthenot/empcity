@@ -312,7 +312,13 @@ class Ste {
   }
 
   sendTilemap (tilemap) {
-    this.sendfile('tilemap.bin', [ new Uint8Array(tilemap) ])
+    // big endian
+    // const data = new Uint16Array(tilemap)
+
+    // little endian
+    const data = new Uint8Array(tilemap.map(v => [v >> 8, v & 255]).reduce((v, a) => v.concat(a), []))
+
+    this.sendfile('tilemap.bin', [ data ])
   }
 
   sendTiles (tiles) {

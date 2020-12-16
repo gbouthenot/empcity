@@ -132,9 +132,9 @@ drawscreen:     movem.l a0-a6/d0-d7,-(sp)
 preTilemap:     lea     tilemap,a0
                 lea     tilemapPre,a1
                 lea     tiles(pc),a2
-                move.w  #tilemap_end-tilemap-1,d1
+                move.w  #(tilemap_end-tilemap)/2-1,d1
 .loop           moveq   #0,d0
-                move.b  (a0)+,d0
+                move.w  (a0)+,d0        // max 512
                 lsl.w   #7,d0
                 add.l   a2,d0
                 move.l  d0,(a1)+
@@ -152,4 +152,4 @@ tilemap_end:    *
 userstack:      ds.l    1
 oldpal:         ds.w    16
                 ds.w    1       ; res
-tilemapPre:     ds.b    (tilemap_end-tilemap)*4
+tilemapPre:     ds.b    (tilemap_end-tilemap)*2
