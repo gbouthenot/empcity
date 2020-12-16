@@ -1,4 +1,14 @@
 /* eslint-env browser */
+
+/** HOW TO USE
+    Load canvas.html
+    go to console
+    tm.go()
+    ste.sendTilemap(tm.tilemap)
+    ste.sendTiles(tm.tilesgfx)
+    ste.sendPalette(tm.palette)
+ */
+
 class Tilemap {
   constructor () {
     this.el = {}
@@ -34,7 +44,7 @@ class Tilemap {
    * show where this tile is used in the image
    */
   clickOnImage (e) {
-    const clickedTile = (e.offsetX >> 4) + (e.offsetY >> 4) * (this.imageWidth + 1 >> 4)
+    const clickedTile = (e.offsetY >> 4) + (e.offsetX >> 4) * (this.imageHeight + 1 >> 4)
     const tilenb = this.tilemap[clickedTile]
     // show where it is used is the main image
     this.selectTile(tilenb)
@@ -168,12 +178,12 @@ class Tilemap {
   showTileUsage (tileToShow) {
     this.imageCtx.fillStyle = '#000000'
     this.imageCtx.putImageData(this.imageData, 0, 0)
-    const widthTile = this.imageWidth / 16
+    const heightTile = this.imageHeight / 16
     for (let tilenb = 0; tilenb < this.tilemap.length; tilenb++) {
       const currentTile = this.tilemap[tilenb]
       if (currentTile === tileToShow) {
-        const y = parseInt(tilenb / widthTile)
-        const x = tilenb - y * widthTile
+        const x = parseInt(tilenb / heightTile)
+        const y = tilenb - x * heightTile
         // paint it black
         this.imageCtx.fillRect(x * 16, y * 16, 16, 16)
       }
@@ -190,8 +200,8 @@ class Tilemap {
     const tilesgfx = this.tilesgfx
     const tilemap = this.tilemap
 
-    for (let y = 0, tileIdx = 0; y < this.imageHeight >> 4; y++) {
-      for (let x = 0; x < this.imageWidth >> 4; x++) {
+    for (let x = 0, tileIdx = 0; x < this.imageWidth >> 4; x++) {
+      for (let y = 0; y < this.imageHeight >> 4; y++) {
         const curTile = this.extractTile(x, y, this.palette)
         const tileNb = tilesgfx.findIndex(a => a.hex === curTile.hex)
         if (tileNb === -1) {
@@ -264,8 +274,6 @@ class Tilemap {
   }
 }
 
-
-
 class Ste {
   /**
    * return hex string for 16 pixels interleaved on 4 bitplanes
@@ -284,7 +292,7 @@ class Ste {
       num >>= 1
       out[3] |= (num & 1) << dec
     }
-    out = out.reduce((acc, val) => acc + ('000'  + val.toString(16)).slice(-4), '')
+    out = out.reduce((acc, val) => acc + ('000' + val.toString(16)).slice(-4), '')
     return out
   }
 
@@ -344,7 +352,7 @@ class Ste {
 
   convPalette (pal) {
     const stpal = pal.map(col => this.convColor(col.hex))
-    return (stpal.reduce((a, b) => a + b) + "0000000000000000000000000000000000000000").slice(0, 64)
+    return (stpal.reduce((a, b) => a + b) + '0000000000000000000000000000000000000000').slice(0, 64)
   }
 }
 

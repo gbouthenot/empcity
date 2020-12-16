@@ -144,8 +144,8 @@ preTilemap:     lea     tilemap,a0
 
                 SECTION DATA
 palette:        incbin  rsc/palette.bin
-tiles:          incbin  rsc/tiles_h.bin
-tilemap:        incbin  rsc/tilemap_h.bin
+tiles:          incbin  rsc/tiles.bin
+tilemap:        incbin  rsc/tilemap.bin
 tilemap_end:    *
 
                 SECTION BSS
