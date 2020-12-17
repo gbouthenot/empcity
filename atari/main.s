@@ -4,25 +4,25 @@ LINEBYTES       EQU     168
 ;            video base adr:
 ; $ff8201    0 0 X X X X X X   High Byte      yes    yes
 ; $ff8203    X X X X X X X X   Mid Byte       yes    yes
-; $ff820D    X X X X X X X 0   Low Byte       no     yes
+; $ff820d    X X X X X X X 0   Low Byte       no     yes    Write AFTER high/mid
+; $ff820f    X X X X X X X X                  no     yes    Line-Offset Register
 ; $ff8265    0 0 0 0 X X X X                                Pixel shift
 ;           video base counter
 ; $ff8205    0 0 X X X X X X   High Byte      ro     rw
 ; $ff8207    X X X X X X X X   Mid Byte       ro     rw
 ; $ff8209    X X X X X X X 0   Low Byte       ro     rw
-; $ff820f    X X X X X X X X                  no     yes    Line-Offset Register
 
 
 
 main:           bsr preTilemap
 
+SYSINIT:
                 clr.l   -(sp)       ;SUP_SET
                 move.w  #$20,-(sp)  ;Super()
                 trap    #1
                 addq.l  #6,sp
                 move.l  d0,userstack
 
-                ;save palette + res + set new palette + low rest
                 lea     $ff8240,a6
                 lea     oldpal,a5
                 lea     palette,a4
@@ -30,10 +30,13 @@ main:           bsr preTilemap
 .savpal:        move.w  (a6),(a5)+
                 move.w  (a4)+,(a6)+
                 dbra    d0,.savpal
-                move.w  $ff8260-$ff8260(a6),(a5)+       ; save resolution
+                move.w  (a6),(a5)+                      ; save resolution
                 movep.w $ff8201-$ff8260(a6),d0
-                move.w  d0,(a5)+
-                clr.w   $ff8260-$ff8260(a6)             ; set low resolution
+                move.w  d0,(a5)+                        ; save old screen adr
+                move.l  $68.w,(a5)+                     ; save $68
+                move.l  $70.w,(a5)+                     ; save $70
+
+                clr.w   (a6)                            ; set low resolution
                 move.b  #4,$ffff820f.w                  ; line width = 168 bytes
 
                 ; init switch data
@@ -45,11 +48,19 @@ main:           bsr preTilemap
                 move.l  a1,(a2)+                        ; next adr
                 clr.l   (a2)+                           ; next line width offset, pixel shift, missed switch
 
-mainloop:
-                move.l  $4ba.w,d1
+                lea     new70(pc),a0
+                move.l  a0,$70.w
 
-                moveq   #0,d7               ; d7: x coord (0-1616)
-.mainloop:      move.w  d7,d6
+mainloop:
+                move.l  $4ba.w,d1                       ; measure start
+
+                moveq   #0,d7                           ; d7: x coord (0-1616)
+.mainloop:      tst.b   switchdata+5
+                bne.s   .mainloop                       ; wait until screen is NOT ready
+
+
+
+                move.w  d7,d6
                 lsr.w   #4,d6
                 mulu    #31,d6
                 add.l   d6,d6
@@ -62,11 +73,9 @@ mainloop:
                 lea     switchdata,a2
                 move.w  d7,d6
                 and.w   #$f,d6
-                beq.s   .bothdec                        ; d6=xxyy: xx:offset(0), yy: pixelshift
-                ;clr.b   $ffff820f.w         ; linewidth
-                ;move.b  d6,$ffff8265.w      ; pixel shift
+                bne.s   .bothdec                        ; d6=xxyy: xx:offset(0), yy: pixelshift
 .zerodec:       move.w  #$400,d6
-.bothdec:       move.w  d6,$10(a2)                      ; set nextlineoffset=0, next pixelshify=t
+.bothdec:       move.w  d6,$a(a2)                       ; set nextlineoffset=0, next pixelshify=t
                 st      $5(a2)                          ; screen is ready to switch !
 
                 ;end of mainloop
@@ -74,37 +83,65 @@ mainloop:
                 cmp.w   #1616,d7
                 ble.s   .mainloop
 
-                move.l  $4ba.w,d2               ; measure: end
+                move.l  $4ba.w,d2                        ; measure: end
                 sub.l   d1,d2
 
                 move.w  #7,-(sp)
                 trap    #1
                 addq.l  #2,sp
 
-                clr.b   $ffff820f.w             ; reset low byte
-                move.b  #1,$ffff8265.w          ; reset pixel shift
 
-                ; restore palette
-                lea     $ff8240,a6
+
+;**********
+SYSRESTORE:
+                lea     $ffff8240.w,a6
                 lea     oldpal,a5
                 moveq   #17-1,d0
-.restpal:       move.w  (a5)+,(a6)+
+.restpal:       move.w  (a5)+,(a6)+                     ; palette and res
                 dbra    d0,.restpal
-                clr.b   $ffff8265.w             ; no pixel shift
-                clr.b   $ffff820f.w             ; line width standard
+                clr.b   $ffff8265.w                     ; no pixel shift
+                clr.b   $ffff820f.w                     ; line width standard
+                clr.b   $ffff820d.w                     ; no low byte
                 move.w  (a5)+,d0
-                movep.w d0,$ff8260-$ff8260(a6)  ; video base address
+                movep.w d0,$ff8201-$ff8262(a6)          ; video base address
+                move.l  (a5)+,$68.w
+                move.l  (a5)+,$70.w
 
                 ;return to user mode
-                move.l  userstack,-(sp)    ;stack
-                move.w  #$20,-(sp)  ;Super()
+                move.l  userstack,-(sp)
+                move.w  #$20,-(sp)
                 trap    #1
                 addq.l  #6,sp
 
                 clr.w   -(sp)
                 trap    #1
 
+new70:          movem.l a0-a1/d0,-(sp)
+                move.w  #$000,$ffff8240.w
+                lea     switchdata+5,a0
+                tst.b   (a0)
+                bne.s   .ready
+                ; not ready
+                addq.w  #1,$c-5(a0)
+                move.w  #$f00,$ffff8240.w
+                bra.s   .end70
+.ready:         sf      (a0)+                           ; set not ready
+                move.w  (a0)+,d0
+                lea     $ffff8200.w,a1
+                move.b  d0,$1(a1)                       ; set high base
+                move.b  d0,$5(a1)                       ; set high counter
+                move.b  (a0),$3(a1)                     ; set mid base
+                move.b  (a0)+,$7(a1)                    ; set mid counter
+                move.b  (a0),$d(a1)                     ; set low base (last)
+                move.b  (a0)+,$9(a1)                    ; set low counter (last)
+                move.b  (a0)+,$f(a1)                    ; set line offset
+                move.b  (a0),$65(a1)                    ; set pixel shift
 
+                move.l  0-11(a0),d0                     ; swap screen adrs
+                move.l  6-11(a0),0-11(a0)
+                move.l  d0,6-11(a0)
+.end70:         movem.l  (sp)+,a0-a1/d0
+new68:          rte
 
 
 ; a5: tilemapPre
@@ -113,35 +150,35 @@ drawscreen:     movem.l a0-a6/d0-d7,-(sp)
                 lea     tiles,a4
 
                 ; blit init
-                lea     $ff8a00,a0          ; a0: Blitter
-                move.l  #$20002,$20(a0)      ; src x / y incr
-                move.l  #(2<<16)+LINEBYTES-6,$2e(a0)   ; dest x / y incr
+                lea     $ff8a00,a0                      ; a0: Blitter
+                move.l  #$20002,$20(a0)                 ; src x / y incr
+                move.l  #(2<<16)+LINEBYTES-6,$2e(a0)    ; dest x / y incr
                 moveq   #-1,d7
-                move.l  d7,$28(a0)          ; endmask 1 / 2
-                move.w  d7,$2c(a0)          ; endmask 3
-                move.w  #4,$36(a0)          ; xCount=4 : copy 4 words = 4 bitplanes
-                move.l  #($203<<16)+0,$3a(a0)  ; hop: source / op = source / (linenumber, smudge,hog)/ (skew / nfsr / fxsr)
+                move.l  d7,$28(a0)                      ; endmask 1 / 2
+                move.w  d7,$2c(a0)                      ; endmask 3
+                move.w  #4,$36(a0)                      ; xCount=4 : copy 4 words = 4 bitplanes
+                move.l  #($203<<16)+0,$3a(a0)           ; hop: source / op = source / (linenumber, smudge,hog)/ (skew / nfsr / fxsr)
 
-                moveq   #21,d7                  ; draw 21 columns (336 pixels)
+                moveq   #21,d7                          ; draw 21 columns (336 pixels)
                 lea     $24(a0),a1
                 lea     $38(a0),a2
                 lea     $3c(a0),a3
-                moveq   #16,d0                  ; yCount=16
-                moveq   #-$40,d1                ; $c0: BUSY / HOG / smudge
+                moveq   #16,d0                          ; yCount=16
+                moveq   #-$40,d1                        ; $c0: BUSY / HOG / smudge
 .nxtcol:        move.w  d7,-(sp)
 
 ;a5: tilemap (current)
 ;a6: screen (dest)
 ;a0: blitter base
 
-                move.l  a6,$32(a0)              ; dest adr
+                move.l  a6,$32(a0)                      ; dest adr
 
                 REPT    2
                 movem.l (a5)+,d2-d7
                 ;REPT    12
-                ;move.l  (a5)+,(a1)              ; set source address / a5: next tile vertically
-                ;move.w  d0,(a2)                 ; yCount=16
-                ;move.b  d1,(a3)                 ; BUSY / HOG / smudge
+                ;move.l  (a5)+,(a1)                     ; set source address / a5: next tile vertically
+                ;move.w  d0,(a2)                        ; yCount=16
+                ;move.b  d1,(a3)                        ; BUSY / HOG / smudge
                 ;ENDR
                 move.l  d2,(a1)
                 move.w  d0,(a2)
@@ -169,13 +206,14 @@ drawscreen:     movem.l a0-a6/d0-d7,-(sp)
                 ENDR
 
 
-                lea     (-12+31)*4(a5),a5       ; tilemap: return to beginning of column and move right 1 tile
-                addq.l  #8,a6                   ; next column
+                lea     (-12+31)*4(a5),a5               ; tilemap: return to beginning of column and move right 1 tile
+                addq.l  #8,a6                           ; next column
                 move.w  (sp)+,d7
                 subq.w  #1,d7
-                bne     .nxtcol
+                bne.s   .nxtcol
 
                 movem.l (sp)+,a0-a6/d0-d7
+                move.w  #$00f,$ffff8240.w
                 sf      switchdata+5
                 rts
 
@@ -201,16 +239,18 @@ tilemap_end:    *
                 SECTION BSS
 userstack:      ds.l    1
 oldpal:         ds.w    16
-                ds.w    1       ; res
-                ds.w    1       ; video adr bytes 2 & 3
+                ds.w    1                       ; res
+                ds.w    1                       ; video adr bytes 2 & 3
+                ds.l    1                       ; old $68
+                ds.l    1                       ; old $70
 
-switchdata:     ds.l    1                       ; $0  current displayed screen
-                ds.b    1                       ; $4  0
-                ds.b    1                       ; $5  next screen ready ? 0=no
-                ds.l    1                       ; $6  next screen buffer
-                ds.b    1                       ; $10 next line width offset
-                ds.b    1                       ; $11 next pixel shift
-                ds.w    1                       ; $12 number of missed switches
+switchdata:     ds.l    1                       ; $0 current displayed screen
+                ds.b    1                       ; $4 0
+                ds.b    1                       ; $5 next screen ready ? 0=no
+                ds.l    1                       ; $6 next screen buffer
+                ds.b    1                       ; $a next line width offset
+                ds.b    1                       ; $b next pixel shift
+                ds.w    1                       ; $c number of missed switches
 
 
 tilemapPre:     ds.b    (tilemap_end-tilemap)*2
