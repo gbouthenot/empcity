@@ -33,6 +33,9 @@ SYSINIT:
                 move.w  (a6),(a5)+                      ; save resolution
                 movep.w $ff8201-$ff8260(a6),d0
                 move.w  d0,(a5)+                        ; save old screen adr
+                move.l  $fffffa06.w,d0
+                move.l  d0,(a5)+                        ; save old iera ierbb
+                clr.l   $fffffa06.w
                 move.l  $68.w,(a5)+                     ; save $68
                 move.l  $70.w,(a5)+                     ; save $70
 
@@ -50,15 +53,22 @@ SYSINIT:
 
                 lea     new70(pc),a0
                 move.l  a0,$70.w
+                lea     new68(pc),a0
+                move.l  a0,$68.w
 
-mainloop:
+; MAIN LOOP
                 move.l  $4ba.w,d1                       ; measure start
-
                 moveq   #0,d7                           ; d7: x coord (0-1616)
-.mainloop:      tst.b   switchdata+5
-                bne.s   .mainloop                       ; wait until screen is NOT ready
+mainloop:
+                btst    #7,$fffffc00.w
+                beq.s   .waitscreen
+.readkey:       cmp.b   #$39,$fffffc02.w
+                beq.s   mainloopexit
+                btst    #7,$fffffc00.w
+                bne.s   .readkey
 
-
+.waitscreen:    tst.b   switchdata+5
+                bne.s   .waitscreen                     ; wait until screen is NOT ready
 
                 move.w  d7,d6
                 lsr.w   #4,d6
@@ -81,16 +91,11 @@ mainloop:
                 ;end of mainloop
                 addq.w  #1,d7
                 cmp.w   #1616,d7
-                ble.s   .mainloop
+                ble.s   mainloop
 
+mainloopexit:
                 move.l  $4ba.w,d2                        ; measure: end
                 sub.l   d1,d2
-
-                move.w  #7,-(sp)
-                trap    #1
-                addq.l  #2,sp
-
-
 
 ;**********
 SYSRESTORE:
@@ -104,6 +109,7 @@ SYSRESTORE:
                 clr.b   $ffff820d.w                     ; no low byte
                 move.w  (a5)+,d0
                 movep.w d0,$ff8201-$ff8262(a6)          ; video base address
+                move.l  (a5)+,$fffffa06.w               ; iera ierbb
                 move.l  (a5)+,$68.w
                 move.l  (a5)+,$70.w
 
@@ -159,7 +165,7 @@ drawscreen:     movem.l a0-a6/d0-d7,-(sp)
                 move.w  #4,$36(a0)                      ; xCount=4 : copy 4 words = 4 bitplanes
                 move.l  #($203<<16)+0,$3a(a0)           ; hop: source / op = source / (linenumber, smudge,hog)/ (skew / nfsr / fxsr)
 
-                moveq   #21,d7                          ; draw 21 columns (336 pixels)
+                moveq   #17,d7                          ; draw 17 columns (272 pixels)
                 lea     $24(a0),a1
                 lea     $38(a0),a2
                 lea     $3c(a0),a3
@@ -241,6 +247,7 @@ userstack:      ds.l    1
 oldpal:         ds.w    16
                 ds.w    1                       ; res
                 ds.w    1                       ; video adr bytes 2 & 3
+                ds.l    1                       ; mfp iera ierb
                 ds.l    1                       ; old $68
                 ds.l    1                       ; old $70
 
