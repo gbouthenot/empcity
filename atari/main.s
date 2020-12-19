@@ -186,7 +186,6 @@ drawscreen:     movem.l a0-a6/d0-d7,-(sp)
 
                 ; blit init
                 lea     $ff8a00,a0                      ; a0: Blitter
-                not.w   d7
                 move.w  d7,d6
                 swap  d6
                 move.w  d7,d6
@@ -307,10 +306,10 @@ preTilemap:     lea     tilemap,a0
 
 
                 SECTION DATA
-endmasks:       dc.w  $ffff, $7fff, $3fff, $1fff
-                dc.w  $0fff, $07ff, $03ff, $01ff
-                dc.w  $00ff, $007f, $003f, $001f
-                dc.w  $000f, $0007, $0003, $0001
+endmasks:       dc.w  $0000, $8000, $c000, $e000
+                dc.w  $f000, $f800, $fc00, $fe00
+                dc.w  $ff00, $ff80, $ffc0, $ffe0
+                dc.w  $fff0, $fff8, $fffc, $fffe
 palette:        incbin  rsc/palette.bin
 tiles:          incbin  rsc/tiles.bin
 tilemap:        incbin  rsc/tilemap.bin
