@@ -82,33 +82,8 @@ mainloop:
                 bne.s   .waitscreen                     ; wait until screen is NOT ready
                 ENDIF
 
-                move.w  d7,d6
-                lsr.w   #4,d6
-                mulu    #31,d6
-                add.l   d6,d6
-                add.l   d6,d6
-                lea     tilemapPre,a5
-                adda.l  d6,a5                           ; a5: tilemap
-
                 bsr     drawscreen
-
-                lea     switchdata,a2
-                move.w  d7,d6
-                and.w   #$f,d6
-                bne.s   .bothdec                        ; d6=xxyy: xx:offset(0), yy: pixelshift
-.zerodec:       IF      DEBUG==0
-                move.w  #$400,d6
-                ELSE
-                move.b  #4,$ffff820f.w
-                clr.b   $ffff8265.w
-                ENDIF
-.bothdec:       IF      DEBUG==0
-                move.w  d6,$a(a2)                       ; set nextlineoffset=0, next pixelshify=t
-                st      $5(a2)                          ; screen is ready to switch !
-                ELSE
-                clr.b   $ffff820f.w
-                move.b  d6,$ffff8265.w
-                ENDIF
+                st      switchdata+5                    ; screen is ready to switch !
 
                 ;end of mainloop
                 addq.w  #1,d7
@@ -172,10 +147,40 @@ new70:          movem.l a0-a1/d0,-(sp)
 new68:          rte
 
 
-; a5: tilemapPre
+; d7: x coord
 drawscreen:     movem.l a0-a6/d0-d7,-(sp)
-                move.l  switchdata+6,a6
+
+                move.w  d7,d6
+                lsr.w   #4,d6
+                mulu    #31,d6
+                add.l   d6,d6
+                add.l   d6,d6
+                lea     tilemapPre,a5
+                adda.l  d6,a5                           ; a5: tilemap
+
+                lea     switchdata,a2
+                and.w   #$f,d7
+                move.w  d7,d6
+                bne.s   .bothdec                        ; d6=xxyy: xx:offset(0), yy: pixelshift
+.zerodec:       IF      DEBUG==0
+                move.w  #$400,d6
+                ELSE
+                move.b  #4,$ffff820f.w
+                clr.b   $ffff8265.w
+                ENDIF
+.bothdec:       IF      DEBUG==0
+                move.w  d6,$a(a2)                       ; set nextlineoffset=0, next pixelshify=t
+                ELSE
+                clr.b   $ffff820f.w
+                move.b  d6,$ffff8265.w
+                ENDIF
+
+                move.l  6(a2),a6                        ; a6: screen adress
+                lea     endmasks(pc),a4
+                add.w   d7,d7
+                move.w  0(a4,d7.w),-(sp)                ; stack endmask
                 lea     tiles,a4
+                
 
                 ; blit init
                 lea     $ff8a00,a0                      ; a0: Blitter
@@ -233,12 +238,38 @@ drawscreen:     movem.l a0-a6/d0-d7,-(sp)
                 move.b  d1,(a3)
                 ENDR
 
-
+                ; now apply right mask !
                 lea     (-12+31)*4(a5),a5               ; tilemap: return to beginning of column and move right 1 tile
                 addq.l  #8,a6                           ; next column
                 move.w  (sp)+,d7
                 subq.w  #1,d7
                 bne.s   .nxtcol
+
+                move.w  (sp)+,$28(a0)                   ; endmask1
+                subq.l  #8,a6                           ; return to last block
+
+                move.l  a6,$32(a0)                      ; dest adr
+                clr.b   $3b(a0)                         ; OP= Only 0 bits
+                move.w  #1,$36(a0)                      ; xCount=1 : 1 word
+                move.w  #LINEBYTES,$30(a0)              ; dest y incr
+
+                move.w  #192,d0                         ; 192 lines
+                move.l  a6,$32(a0)                      ; dest adr
+                move.w  d0,(a2)                         ; yCount
+                move.b  d1,(a3)                         ; BUSY / HOG / smudge
+                addq.l  #2,a6
+                move.l  a6,$32(a0)                      ; dest adr
+                move.w  d0,(a2)                         ; yCount
+                move.b  d1,(a3)                         ; BUSY / HOG / smudge
+                addq.l  #2,a6
+                move.l  a6,$32(a0)                      ; dest adr
+                move.w  d0,(a2)                         ; yCount
+                move.b  d1,(a3)                         ; BUSY / HOG / smudge
+                addq.l  #2,a6
+                move.l  a6,$32(a0)                      ; dest adr
+                move.w  d0,(a2)                         ; yCount
+                move.b  d1,(a3)                         ; BUSY / HOG / smudge
+
 
                 movem.l (sp)+,a0-a6/d0-d7
                 move.w  #$00f,$ffff8240.w
@@ -259,6 +290,10 @@ preTilemap:     lea     tilemap,a0
 
 
                 SECTION DATA
+endmasks:       dc.w  $ffff, $7fff, $3fff, $1fff
+                dc.w  $0fff, $07ff, $03ff, $01ff
+                dc.w  $00ff, $007f, $003f, $001f
+                dc.w  $000f, $0007, $0003, $0001
 palette:        incbin  rsc/palette.bin
 tiles:          incbin  rsc/tiles.bin
 tilemap:        incbin  rsc/tilemap.bin
