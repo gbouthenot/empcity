@@ -147,6 +147,7 @@ new70:          movem.l a0-a1/d0,-(sp)
 new68:          rte
 
 
+;********** DRAWSCREEN *******
 ; d7: x coord
 drawscreen:     movem.l a0-a6/d0-d7,-(sp)
 
@@ -167,6 +168,7 @@ drawscreen:     movem.l a0-a6/d0-d7,-(sp)
                 ELSE
                 move.b  #4,$ffff820f.w
                 clr.b   $ffff8265.w
+                bra.s   .enddec
                 ENDIF
 .bothdec:       IF      DEBUG==0
                 move.w  d6,$a(a2)                       ; set nextlineoffset=0, next pixelshify=t
@@ -174,17 +176,30 @@ drawscreen:     movem.l a0-a6/d0-d7,-(sp)
                 clr.b   $ffff820f.w
                 move.b  d6,$ffff8265.w
                 ENDIF
+.enddec:
 
                 move.l  6(a2),a6                        ; a6: screen adress
                 lea     endmasks(pc),a4
                 add.w   d7,d7
-                move.w  0(a4,d7.w),-(sp)                ; stack endmask
+                move.w  0(a4,d7.w),d7                   ; get mask for last column
                 lea     tiles,a4
-                
 
                 ; blit init
                 lea     $ff8a00,a0                      ; a0: Blitter
-                move.l  #$20002,$20(a0)                 ; src x / y incr
+                not.w   d7
+                move.w  d7,d6
+                swap  d6
+                move.w  d7,d6
+                move.l  d6,(a0)+
+                move.l  d6,(a0)+
+                move.l  d6,(a0)+
+                move.l  d6,(a0)+
+                move.l  d6,(a0)+
+                move.l  d6,(a0)+
+                move.l  d6,(a0)+
+                move.l  d6,(a0)+
+                move.l  #$20002,(a0)                    ; src x / y incr
+                lea     -$20(a0),a0
                 move.l  #(2<<16)+LINEBYTES-6,$2e(a0)    ; dest x / y incr
                 moveq   #-1,d7
                 move.l  d7,$28(a0)                      ; endmask 1 / 2
@@ -192,7 +207,7 @@ drawscreen:     movem.l a0-a6/d0-d7,-(sp)
                 move.w  #4,$36(a0)                      ; xCount=4 : copy 4 words = 4 bitplanes
                 move.l  #($203<<16)+0,$3a(a0)           ; hop: source / op = source / (linenumber, smudge,hog)/ (skew / nfsr / fxsr)
 
-                moveq   #NBLOCKX,d7                     ; draw 17 columns (272 pixels)
+                moveq   #NBLOCKX-1,d7                   ; number of columns. Last one will me masked
                 lea     $24(a0),a1
                 lea     $38(a0),a2
                 lea     $3c(a0),a3
@@ -238,39 +253,41 @@ drawscreen:     movem.l a0-a6/d0-d7,-(sp)
                 move.b  d1,(a3)
                 ENDR
 
-                ; now apply right mask !
                 lea     (-12+31)*4(a5),a5               ; tilemap: return to beginning of column and move right 1 tile
                 addq.l  #8,a6                           ; next column
                 move.w  (sp)+,d7
                 subq.w  #1,d7
                 bne.s   .nxtcol
 
-                move.w  (sp)+,$28(a0)                   ; endmask1
-                subq.l  #8,a6                           ; return to last block
-
-                move.l  a6,$32(a0)                      ; dest adr
-                clr.b   $3b(a0)                         ; OP= Only 0 bits
-                move.w  #1,$36(a0)                      ; xCount=1 : 1 word
-                move.w  #LINEBYTES,$30(a0)              ; dest y incr
-
-                move.w  #192,d0                         ; 192 lines
-                move.l  a6,$32(a0)                      ; dest adr
-                move.w  d0,(a2)                         ; yCount
-                move.b  d1,(a3)                         ; BUSY / HOG / smudge
-                addq.l  #2,a6
-                move.l  a6,$32(a0)                      ; dest adr
-                move.w  d0,(a2)                         ; yCount
-                move.b  d1,(a3)                         ; BUSY / HOG / smudge
-                addq.l  #2,a6
-                move.l  a6,$32(a0)                      ; dest adr
-                move.w  d0,(a2)                         ; yCount
-                move.b  d1,(a3)                         ; BUSY / HOG / smudge
-                addq.l  #2,a6
-                move.l  a6,$32(a0)                      ; dest adr
-                move.w  d0,(a2)                         ; yCount
-                move.b  d1,(a3)                         ; BUSY / HOG / smudge
 
 
+                ; last column : apply right mask !
+                move.l  a6,$32(a0)                      ; dest adr
+                move.b  #3,$3a(a0)                      ; hop: source&halftone
+
+                REPT    2
+                movem.l (a5)+,d2-d7
+                move.l  d2,(a1)                         ; row 0
+                move.w  d0,(a2)
+                move.b  d1,(a3)
+                move.l  d3,(a1)                         ; row 1
+                move.w  d0,(a2)
+                move.b  d1,(a3)
+                move.l  d4,(a1)                         ; row 2
+                move.w  d0,(a2)
+                move.b  d1,(a3)
+                move.l  d5,(a1)                         ; row 3
+                move.w  d0,(a2)
+                move.b  d1,(a3)
+                move.l  d6,(a1)                         ; row 4
+                move.w  d0,(a2)
+                move.b  d1,(a3)
+                move.l  d7,(a1)                         ; row 5
+                move.w  d0,(a2)
+                move.b  d1,(a3)
+                ENDR
+
+                lea     (-12+31)*4(a5),a5               ; tilemap: return to beginning of column and move right 1 tile
                 movem.l (sp)+,a0-a6/d0-d7
                 move.w  #$00f,$ffff8240.w
                 sf      switchdata+5
