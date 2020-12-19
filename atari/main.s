@@ -319,5 +319,5 @@ switchdata:     ds.l    1                       ; $0 current displayed screen
 
 tilemapPre:     ds.b    (tilemap_end-tilemap)*2
 
-screen1:        ds.b    192*336/2
+screen1:        ds.b    200*336/2
 screen2:        ds.b    192*336/2
