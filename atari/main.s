@@ -1,6 +1,6 @@
                 mc68000
 LINEBYTES       EQU     168
-NBLOCKX         EQU     17                              ; nb horizontal blocks
+NBLOCKX         EQU     17                              ; nb horizontal blocks 17
 DEBUG           EQU     0
 
 
