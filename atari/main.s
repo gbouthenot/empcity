@@ -1,5 +1,8 @@
                 mc68000
 LINEBYTES       EQU     168
+NBLOCKX         EQU     17                              ; nb horizontal blocks
+DEBUG           EQU     0
+
 
 ;            video base adr:
 ; $ff8201    0 0 X X X X X X   High Byte      yes    yes
@@ -35,7 +38,6 @@ SYSINIT:
                 move.w  d0,(a5)+                        ; save old screen adr
                 move.l  $fffffa06.w,d0
                 move.l  d0,(a5)+                        ; save old iera ierbb
-                clr.l   $fffffa06.w
                 move.l  $68.w,(a5)+                     ; save $68
                 move.l  $70.w,(a5)+                     ; save $70
 
@@ -43,18 +45,26 @@ SYSINIT:
                 move.b  #4,$ffff820f.w                  ; line width = 168 bytes
 
                 ; init switch data
+                IF DEBUG==0
                 lea     screen1,a0
                 lea     screen2,a1
+                ELSE
+                lea     $3f8000,a0
+                move.l  a0,a1
+                ENDIF
                 lea     switchdata,a2
                 move.l  a0,(a2)+                        ; set current screen adr
                 clr.w   (a2)+                           ; next not ready
                 move.l  a1,(a2)+                        ; next adr
                 clr.l   (a2)+                           ; next line width offset, pixel shift, missed switch
 
+                IF      DEBUG==0
+                clr.l   $fffffa06.w
                 lea     new70(pc),a0
                 move.l  a0,$70.w
                 lea     new68(pc),a0
                 move.l  a0,$68.w
+                ENDIF
 
 ; MAIN LOOP
                 move.l  $4ba.w,d1                       ; measure start
@@ -67,8 +77,10 @@ mainloop:
                 btst    #7,$fffffc00.w
                 bne.s   .readkey
 
-.waitscreen:    tst.b   switchdata+5
+.waitscreen:    IF      DEBUG==0
+                tst.b   switchdata+5
                 bne.s   .waitscreen                     ; wait until screen is NOT ready
+                ENDIF
 
                 move.w  d7,d6
                 lsr.w   #4,d6
@@ -84,9 +96,19 @@ mainloop:
                 move.w  d7,d6
                 and.w   #$f,d6
                 bne.s   .bothdec                        ; d6=xxyy: xx:offset(0), yy: pixelshift
-.zerodec:       move.w  #$400,d6
-.bothdec:       move.w  d6,$a(a2)                       ; set nextlineoffset=0, next pixelshify=t
+.zerodec:       IF      DEBUG==0
+                move.w  #$400,d6
+                ELSE
+                move.b  #4,$ffff820f.w
+                clr.b   $ffff8265.w
+                ENDIF
+.bothdec:       IF      DEBUG==0
+                move.w  d6,$a(a2)                       ; set nextlineoffset=0, next pixelshify=t
                 st      $5(a2)                          ; screen is ready to switch !
+                ELSE
+                clr.b   $ffff820f.w
+                move.b  d6,$ffff8265.w
+                ENDIF
 
                 ;end of mainloop
                 addq.w  #1,d7
@@ -165,11 +187,11 @@ drawscreen:     movem.l a0-a6/d0-d7,-(sp)
                 move.w  #4,$36(a0)                      ; xCount=4 : copy 4 words = 4 bitplanes
                 move.l  #($203<<16)+0,$3a(a0)           ; hop: source / op = source / (linenumber, smudge,hog)/ (skew / nfsr / fxsr)
 
-                moveq   #17,d7                          ; draw 17 columns (272 pixels)
+                moveq   #NBLOCKX,d7                     ; draw 17 columns (272 pixels)
                 lea     $24(a0),a1
                 lea     $38(a0),a2
                 lea     $3c(a0),a3
-                moveq   #16,d0                          ; yCount=16
+                moveq   #16,d0                          ; yCount=16 1 block is 16 line
                 moveq   #-$40,d1                        ; $c0: BUSY / HOG / smudge
 .nxtcol:        move.w  d7,-(sp)
 
