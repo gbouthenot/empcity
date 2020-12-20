@@ -12,6 +12,8 @@
 class Tilemap {
   constructor () {
     this.el = {}
+    this.pointerData = null
+    this.pointerTxt = null
     this.imageData = null
     this.imageWidth = null
     this.imageHeight = null
@@ -101,6 +103,23 @@ class Tilemap {
     // then this.imageCtx.putImageData( pixel, x, y );
     // this.pixel = this.imageCtx.createImageData(1, 1)
     // this.pixel.data[3] = 255
+  }
+  convertPointerImg () {
+    const pointerImg = document.getElementById('pointerImg')
+    const pointerCanvas = document.createElement('canvas')
+    pointerCanvas.width = pointerImg.naturalWidth
+    pointerCanvas.height = pointerImg.naturalHeight
+    const ctx = pointerCanvas.getContext('2d')
+
+    ctx.drawImage(pointerImg, 0, 0)
+    this.pointerData = ctx.getImageData(0, 0, pointerCanvas.width, pointerCanvas.height)
+    console.log(this.pointerData);
+    let pointerTxt = this.pointerData.data.reduce((acc, val, idx)=>{let ch=' ';if (idx%4===0){if(val===0)ch='.';else if(val===255)ch='*';acc+=ch;}return acc}, "")
+    let txt2=[]
+    for(let y=0;y<32;y++){txt2.push(pointerTxt.slice(y<<5,32+(y<<5)))}
+    this.pointerTxt=txt2
+    console.log(txt2)
+    pointerImg.remove()
   }
 
   /**
@@ -261,6 +280,7 @@ class Tilemap {
 
   go () {
     this.convertImgToCanvas()
+    this.convertPointerImg()
     this.buildPalette()
     this.showPalette()
 
@@ -343,6 +363,23 @@ class Ste {
     anc.click()
     // expire ater 1 minute
     setTimeout(_ => URL.revokeObjectURL(anc.href), 60E3)
+  }
+
+  goPointer(aIn) {
+    let out = [];
+    ['*', '.'].forEach(ch1 => {
+      for (let y = 0; y < 32 ; y++) {
+        let row = aIn[y]
+        row = row.replaceAll(ch1, '1')
+        row = row.replaceAll(/[^1]/g, '0')
+        let left = parseInt(row.slice(0, 16), 2).toString(16)
+        let right = parseInt(row.slice(16, 32), 2).toString(16)
+        left = '$' + (('000' + left).slice(-4))
+        right = '$' + (('000' + right).slice(-4))
+        out.push(`dc.w ${left}, ${left}, ${left}, ${left}, ${right}, ${right}, ${right}, ${right}`)
+      }
+    })
+    console.log(out.join('\n'))
   }
 
   /**
