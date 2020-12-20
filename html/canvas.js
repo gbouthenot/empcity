@@ -366,17 +366,20 @@ class Ste {
   }
 
   goPointer(aIn) {
-    let out = [];
+    let out = ['.whites:'];
     ['*', '.'].forEach(ch1 => {
+      if (ch1==='.') {
+        out.push('.blacks:')
+      }
       for (let y = 0; y < 32 ; y++) {
         let row = aIn[y]
         row = row.replaceAll(ch1, '1')
         row = row.replaceAll(/[^1]/g, '0')
         let left = parseInt(row.slice(0, 16), 2).toString(16)
         let right = parseInt(row.slice(16, 32), 2).toString(16)
-        left = '$' + (('000' + left).slice(-4))
-        right = '$' + (('000' + right).slice(-4))
-        out.push(`dc.w ${left}, ${left}, ${left}, ${left}, ${right}, ${right}, ${right}, ${right}`)
+        left = (('000' + left).slice(-4))
+        right = (('000' + right).slice(-4))
+        out.push(`                dc.l $${left}${right}`)
       }
     })
     console.log(out.join('\n'))
