@@ -1,7 +1,7 @@
                 mc68000
 LINEBYTES       EQU     168
-NBLOCKX         EQU     17                               ; nb horizontal blocks 17 / 6 for measure
-DEBUG           EQU     0
+NBLOCKX         EQU     06                               ; nb horizontal blocks 17 / 6 for measure
+DEBUG           EQU     1
 
 
 ;            video base adr:
@@ -33,7 +33,7 @@ SYSINIT:
 .savpal:        move.w  (a6),(a5)+
                 move.w  (a4)+,(a6)+
                 dbra    d0,.savpal
-                move.w  #$0fff,$ffff825e.w              ; last color is white
+                move.w  #$0fff,$ffff8242.w              ; color 1 is white
                 move.w  (a6),(a5)+                      ; save resolution
                 movep.w $ff8201-$ff8260(a6),d0
                 move.w  d0,(a5)+                        ; save old screen adr
@@ -308,9 +308,9 @@ drawscreen:     movem.l a0-a6/d0-d7,-(sp)
 ;(sp).w: nb pixel shift
                 moveq   #2,d0                           ; d0=xCount=2 : copy 2 words
                 move.l  #(8<<16)+LINEBYTES-8,d3         ; d3: dest x / y incr
-                move.w  #$207,d2
+                move.w  #$204,d2
                 swap    d2
-                move.w  (sp)+,d2                        ; d2: hop: source / op = source OR target / (busy/hog/smudge/0/linenumber)/ (fxsr/nfsr/0/0/skew)
+                move.w  (sp)+,d2                        ; d2: hop: source / op = NOT source AND target / (busy/hog/smudge/0/linenumber)/ (fxsr/nfsr/0/0/skew)
                 beq.s   .noskew
 ;if skew>0:
 ; - xcount + 1
@@ -327,10 +327,10 @@ drawscreen:     movem.l a0-a6/d0-d7,-(sp)
 
                 move.w  d0,$36(a0)                      ; xCount
                 move.l  d3,$2e(a0)                      ; dest x / y incr
-                move.l  d2,$3a(a0)                      ; hop: source / op = source OR target / (busy/hog/smudge/0/linenumber)/ (fxsr/nfsr/0/0/skew)
+                move.l  d2,$3a(a0)                      ; hop: source / op / (busy/hog/smudge/0/linenumber)/ (fxsr/nfsr/0/0/skew)
                 moveq   #32,d0                          ; for yCount
 
-                ; white pixels
+                ; mask pixels in black
                 REPT 3
                 move.l  a5,$24(a0)                      ; set src adr
                 move.l  a6,$32(a0)                      ; dest adr
@@ -344,25 +344,13 @@ drawscreen:     movem.l a0-a6/d0-d7,-(sp)
                 move.b  d1,(a3)
                 subq.l  #6,a6
 
-                ; black pixels
+                ; white pixels : only one bitplane !
                 lea   128(a5),a5
-                move.b  #4,$3b(a0)                      ; op = NOT source AND target
+                move.b  #7,$3b(a0)                      ; op = source OR target
                 ;move.l  a5,$24(a0)                     ; bitplane 0 ; set src adr -first not needed)
                 move.l  a6,$32(a0)                      ; dest adr
                 move.w  d0,(a2)                         ; yCount
                 move.b  d1,(a3)                         ; BUSY/hog/smudge/0/linumber
-                addq.l  #2,a6                           ; next bitplane
-                REPT 2                                  ; bitplane 1 & 2
-                move.l  a5,$24(a0)
-                move.l  a6,$32(a0)
-                move.w  d0,(a2)
-                move.b  d1,(a3)
-                addq.l  #2,a6
-                ENDR
-                move.l  a5,$24(a0)                      ; bitplane 3
-                move.l  a6,$32(a0)
-                move.w  d0,(a2)
-                move.b  d1,(a3)
 
                 movem.l (sp)+,a0-a6/d0-d7
                 move.w  #$00f,$ffff8240.w
@@ -392,72 +380,9 @@ tiles:          incbin  rsc/tiles.bin
 tilemap:        incbin  rsc/tilemap.bin
 tilemap_end:    *
 pointerData:
-                dc.l $001f0000
-                dc.l $00e4e000
-                dc.l $03041800
-                dc.l $04040400
-                dc.l $080e0200
-                dc.l $10040100
-                dc.l $20040080
-                dc.l $200e0080
-                dc.l $40040040
-                dc.l $40040040
-                dc.l $40040040
-                dc.l $801f0020
-                dc.l $80208020
-                dc.l $80404020
-                dc.l $92404920
-                dc.l $ffc47fe0
-                dc.l $92404920
-                dc.l $80404020
-                dc.l $80208020
-                dc.l $801f0020
-                dc.l $40040040
-                dc.l $40040040
-                dc.l $40040040
-                dc.l $200e0080
-                dc.l $20040080
-                dc.l $10040100
-                dc.l $080e0200
-                dc.l $04040400
-                dc.l $03041800
-                dc.l $00e4e000
-                dc.l $001f0000
-                dc.l $00000000
+.mask:          dc.l $001f0000, $00efe000, $03767800, $05860c00, $0a0e0200, $14070100, $28060080, $300e00c0, $50070040, $60060060, $60060060, $a01f0020, $c02f8030, $c0504030, $d2606930, $ffe47ff0, $ffe27ff0, $c96064b0, $c020a030, $c01f4030, $400f8050, $60060060, $60060060, $200e00a0, $300700c0, $10060140, $080e0280, $04070500, $03061a00, $01e6ec00, $007f7000, $000f8000
+.white:         dc.l $001f0000, $00e4e000, $03041800, $04040400, $080e0200, $10040100, $20040080, $200e0080, $40040040, $40040040, $40040040, $801f0020, $80208020, $80404020, $92404920, $ffc47fe0, $92404920, $80404020, $80208020, $801f0020, $40040040, $40040040, $40040040, $200e0080, $20040080, $10040100, $080e0200, $04040400, $03041800, $00e4e000, $001f0000, $00000000
 
-                dc.l $00000000
-                dc.l $000b0000
-                dc.l $00726000
-                dc.l $01820800
-                dc.l $02000000
-                dc.l $04030000
-                dc.l $08020000
-                dc.l $10000040
-                dc.l $10030000
-                dc.l $20020020
-                dc.l $20020020
-                dc.l $20000000
-                dc.l $400f0010
-                dc.l $40100010
-                dc.l $40202010
-                dc.l $00200010
-                dc.l $6da236d0
-                dc.l $49202490
-                dc.l $40002010
-                dc.l $40004010
-                dc.l $000b8010
-                dc.l $20020020
-                dc.l $20020020
-                dc.l $00000020
-                dc.l $10030040
-                dc.l $00020040
-                dc.l $00000080
-                dc.l $00030100
-                dc.l $00020200
-                dc.l $01020c00
-                dc.l $00607000
-                dc.l $000f8000
-                
                 SECTION BSS
 userstack:      ds.l    1
 oldpal:         ds.w    16
