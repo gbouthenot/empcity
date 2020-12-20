@@ -1,7 +1,7 @@
                 mc68000
 LINEBYTES       EQU     168
-NBLOCKX         EQU     17                              ; nb horizontal blocks 17 / 6 for measure
-DEBUG           EQU     0
+NBLOCKX         EQU     6                              ; nb horizontal blocks 17 / 6 for measure
+DEBUG           EQU     1
 
 
 ;            video base adr:
@@ -161,6 +161,7 @@ drawscreen:     movem.l a0-a6/d0-d7,-(sp)
 
                 lea     switchdata,a2
                 and.w   #$f,d7
+                move.w  d7,-(sp)
                 move.w  d7,d6
                 bne.s   .bothdec                        ; d6=xxyy: xx:offset(0), yy: pixelshift
 .zerodec:       IF      DEBUG==0
@@ -227,27 +228,22 @@ drawscreen:     movem.l a0-a6/d0-d7,-(sp)
                 ;move.w  d0,(a2)                        ; yCount=16
                 ;move.b  d1,(a3)                        ; BUSY / HOG / smudge
                 ;ENDR
-                move.l  d2,(a1)
+                move.l  d2,(a1)                         ; row 0
                 move.w  d0,(a2)
                 move.b  d1,(a3)
-
-                move.l  d3,(a1)
+                move.l  d3,(a1)                         ; row 1
                 move.w  d0,(a2)
                 move.b  d1,(a3)
-
-                move.l  d4,(a1)
+                move.l  d4,(a1)                         ; row 2
                 move.w  d0,(a2)
                 move.b  d1,(a3)
-
-                move.l  d5,(a1)
+                move.l  d5,(a1)                         ; row 3
                 move.w  d0,(a2)
                 move.b  d1,(a3)
-
-                move.l  d6,(a1)
+                move.l  d6,(a1)                         ; row 4
                 move.w  d0,(a2)
                 move.b  d1,(a3)
-
-                move.l  d7,(a1)
+                move.l  d7,(a1)                          ; row 5
                 move.w  d0,(a2)
                 move.b  d1,(a3)
                 ENDR
@@ -285,21 +281,37 @@ drawscreen:     movem.l a0-a6/d0-d7,-(sp)
                 ENDR
 
 
-; now show pointer
-
+; show pointer
                 move.w  #$0fff,$ffff825e.w
-                move.l  switchdata+6,a6                 ; a6: screen adress
+                moveq   #2,d0                             ; d0=xCount=2 : copy 2 words
+                move.l  #(8<<16)+LINEBYTES-8,d3           ; d3: dest x / y incr
+                move.w  #$207,d2
+                swap    d2
+                move.w  (sp)+,d2                          ; d2: hop: source / op = source OR target / (busy/hog/smudge/0/linenumber)/ (fxsr/nfsr/0/0/skew)
+                beq.s   .noskew
+;if skew>0:
+; - xcount + 1
+; - set $40 (NFSR)
+; - dest y incr - 8
+; - set endmask 3 ?
+                add.b   #$40,d2
+                addq.w  #1,d0
+                subq.w  #8,d3
+
+.noskew:        move.l  switchdata+6,a6                 ; a6: screen adress
                 lea     pointerData,a5
-                move.w  #2,$36(a0)                      ; xCount=2 : copy 2 words
-                move.l  #($207<<16)+0,$3a(a0)           ; hop: source / op = source OR target / (busy/hog/smudge/0/linenumber)/ (fxsr/nfsr/0/0/skew)
                 ;move.l  #$20002,$20(a0)                ; src x / y incr (already set)
-                move.l  #(8<<16)+LINEBYTES-8,$2e(a0)    ; dest x / y incr
+
+
+                move.w  d0,$36(a0)                      ; xCount
+                move.l  d3,$2e(a0)                      ; dest x / y incr
+                move.l  d2,$3a(a0)                      ; hop: source / op = source OR target / (busy/hog/smudge/0/linenumber)/ (fxsr/nfsr/0/0/skew)
 
                 ; white pixels
                 move.l  a5,$24(a0)                      ; set src adr
                 move.l  a6,$32(a0)                      ; dest adr
                 move.w  #32,(a2)                        ; yCount
-                move.b  d1,(a3)                         ; BUSY/hog/smudge/0/linumber
+                move.b  d1,(a3)                         ; BUSY/hog/smudge/0/lineumber
                 addq.l  #2,a6                           ; next bitplane
                 move.l  a5,$24(a0)                      ; set src adr
                 move.l  a6,$32(a0)                      ; dest adr
@@ -319,26 +331,26 @@ drawscreen:     movem.l a0-a6/d0-d7,-(sp)
 
                 ; black pixels
                 lea   128(a5),a5
-                move.l  #($204<<16)+0,$3a(a0)           ; hop: source / op = NOT source AND target / (busy/hog/smudge/0/linenumber)/ (fxsr/nfsr/0/0/skew)
-                ;move.l  a5,$24(a0)                      ; set src adr -first not needed)
+                move.b  #4,$3b(a0)                      ; op = NOT source AND target
+                ;move.l  a5,$24(a0)                     ; bitplane 0 ; set src adr -first not needed)
                 move.l  a6,$32(a0)                      ; dest adr
                 move.w  #32,(a2)                        ; yCount
                 move.b  d1,(a3)                         ; BUSY/hog/smudge/0/linumber
                 addq.l  #2,a6                           ; next bitplane
-                move.l  a5,$24(a0)                      ; set src adr
-                move.l  a6,$32(a0)                      ; dest adr
+                move.l  a5,$24(a0)                      ; bitplane 1
+                move.l  a6,$32(a0)
+                move.w  #32,(a2)
+                move.b  d1,(a3)
+                addq.l  #2,a6
+                move.l  a5,$24(a0)                      ; bitplane 2
+                move.l  a6,$32(a0)
                 move.w  #32,(a2)                        ; yCount
-                move.b  d1,(a3)                         ; BUSY/hog/smudge/0/linumber
-                addq.l  #2,a6                           ; next bitplane
-                move.l  a5,$24(a0)                      ; set src adr
-                move.l  a6,$32(a0)                      ; dest adr
-                move.w  #32,(a2)                        ; yCount
-                move.b  d1,(a3)                         ; BUSY/hog/smudge/0/linumber
-                addq.l  #2,a6                           ; next bitplane
-                move.l  a5,$24(a0)                      ; set src adr
-                move.l  a6,$32(a0)                      ; dest adr
-                move.w  #32,(a2)                        ; yCount
-                move.b  d1,(a3)                         ; BUSY/hog/smudge/0/linumber
+                move.b  d1,(a3)
+                addq.l  #2,a6
+                move.l  a5,$24(a0)                      ; bitplane 3
+                move.l  a6,$32(a0)
+                move.w  #32,(a2)
+                move.b  d1,(a3)
 
 
 
