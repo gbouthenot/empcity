@@ -1,7 +1,9 @@
                 mc68000
 LINEBYTES       EQU     168
-NBLOCKX         EQU     06                               ; nb horizontal blocks 17 / 6 for measure
-DEBUG           EQU     1
+NBLOCKX         EQU     17                               ; nb horizontal blocks 17 / 6 for measure
+DEBUG           EQU     0
+SCENWIDTH       EQU     1936
+SCENHEIGHT      EQU     496
 
 
 ;            video base adr:
@@ -68,16 +70,59 @@ SYSINIT:
                 ENDIF
 
 ; MAIN LOOP
+mainloopInit:   lea     statusdata,a0
+                clr.l   (a0)+
+                clr.l   (a0)+
+                clr.l   (a0)+
+                
                 move.l  $4ba.w,d1                       ; measure start
-                moveq   #0,d7                           ; d7: x coord (0-1616)
 mainloop:
+                lea     statusdata,a0
+                
+.keyloop:       move.b  #1,d2                           ; d2: default 1 for key pressed, 0 if key is depressed
                 btst    #7,$fffffc00.w
-                beq.s   .waitscreen
-.readkey:       cmp.b   #$39,$fffffc02.w
+                beq.s   .endkey
+.readkey:       move.b  $fffffc02.w,d0
+                move.b  d0,d1
+                and.b   #$7f,d1                         ; d1: key code without pressed/depressed
+                cmp.b   #$39+$80,d0                     ; space depressed ?
                 beq.s   mainloopexit
-                btst    #7,$fffffc00.w
-                bne.s   .readkey
+                lea     $4(a0),a1                       ; up
+                cmp.b   #$48,d1
+                beq.s   .arrowkey
+                lea     $6(a0),a1                       ; bottom
+                cmp.b   #$50,d1
+                beq.s   .arrowkey
+                lea     $8(a0),a1                       ; left
+                cmp.b   #$4b,d1
+                beq.s   .arrowkey
+                lea     $a(a0),a1                       ; right
+                cmp.b   #$4d,d1
+                beq.s   .arrowkey
+                bra.s   .keyloop
 
+.arrowkey:
+                cmp.b   d0,d1
+                beq.s   .keyupdown
+                moveq   #0,d2                           ; key is up
+.keyupdown:     move.w  d2,(a1)
+                bra.s   .keyloop
+
+.endkey:
+applydirection:
+; apply top / bottom / left / right directions
+;a0: statusdata
+                move.w  (a0),d7
+                sub.w   $8(a0),d7
+                add.w   $a(a0),d7
+                bge.s   .xpositive
+                add.w   #SCENWIDTH,d7
+.xpositive      cmp.w   #SCENWIDTH,d7
+                blt.s   .xok
+                sub.w   #SCENWIDTH,d7
+.xok:           move.w  d7,(a0)
+
+;d7: viewpoint x
 .waitscreen:    IF      DEBUG==0
                 tst.b   switchdata+5
                 bne.s   .waitscreen                     ; wait until screen is NOT ready
@@ -87,9 +132,7 @@ mainloop:
                 st      switchdata+5                    ; screen is ready to switch !
 
                 ;end of mainloop
-                addq.w  #1,d7
-                cmp.w   #1616,d7
-                ble.s   mainloop
+                bra   mainloop
 
 mainloopexit:
                 move.l  $4ba.w,d2                        ; measure: end
@@ -400,6 +443,12 @@ switchdata:     ds.l    1                       ; $0 current displayed screen
                 ds.b    1                       ; $b next pixel shift
                 ds.w    1                       ; $c number of missed switches
 
+statusdata:     ds.w    1                       ; $0 viewpoint x (0 -> SCENWIDTH-1)
+                ds.w    1                       ; $2 viewpoint y (0 -> 496-SCHENHEIGHT)
+                ds.w    1                       ; $4 key up if !=0
+                ds.w    1                       ; $6 key down
+                ds.w    1                       ; $8 key left
+                ds.w    1                       ; $a key right
 
 tilemapPre:     ds.b    (tilemap_end-tilemap)*2
 
