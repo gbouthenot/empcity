@@ -117,7 +117,7 @@ applydirection:
 ;a0: statusdata
                 ; handle left / right
                 move.w  (a0),d7                         ; d7: viewpointTL_x
-                move.w  4(a0),d6                        ; d6: cursorTL_x
+                move.w  4(a0),d6                        ; d6: pointerTL_x
                 move.w  $c(a0),d5                       ; d5: left
                 move.w  $e(a0),d4                       ; d4: right
                 add.w   d4,d4                           ; d4: right double speed
@@ -130,7 +130,7 @@ applydirection:
 .vpxposi:       cmp.w   #SCENWIDTH,d7
                 blt.s   .vpxok
                 sub.w   #SCENWIDTH,d7
-.vpxok:         ; cap cursorTL_x
+.vpxok:         ; pointerTL_x
                 sub.w   d5,d6
                 sub.w   d5,d6
                 add.w   d4,d6
@@ -140,12 +140,37 @@ applydirection:
 .pxposi:        cmp.w   #(NBLOCKW-1)*16-32+4,d6
                 ble.s   .pxok
                 move.w  #(NBLOCKW-1)*16-32+4,d6
-.pxok:
-
-                move.w  d7,(a0)
+.pxok:          move.w  d7,(a0)
                 move.w  d6,4(a0)
 
-;d7: viewpoint x
+                ; handle top / bottom
+                move.w  2(a0),d7                        ; d7: viewpointTL_y
+                move.w  6(a0),d6                        ; d6: pointerTL_y
+                move.w  $8(a0),d5                       ; d5: top
+                move.w  $a(a0),d4                       ; d4: bottom
+                add.w   d4,d4                           ; d4: bottom double speed
+                add.w   d5,d5                           ; d5: top double speed
+                ; viewpointTL_y
+                sub.w   d5,d7
+                add.w   d4,d7
+                ;bge.s   .vpyposi
+                ;add.w   #SCENWIDTH,d7
+.vpyposi:       ;cmp.w   #SCENWIDTH,d7
+                ;blt.s   .vpyok
+                ;sub.w   #SCENWIDTH,d7
+.vpyok:         ; pointerTL_y
+                sub.w   d5,d6
+                sub.w   d5,d6
+                add.w   d4,d6
+                add.w   d4,d6
+                bge.s   .pyposi
+                clr.w   d6
+.pyposi:        cmp.w   #(NBLOCKH)*16-32,d6
+                ble.s   .pyok
+                move.w  #(NBLOCKH)*16-32,d6
+.pyok:          move.w  d7,2(a0)
+                move.w  d6,6(a0)
+                
 .waitscreen:    IF      DEBUG==0
                 tst.b   switchdata+5
                 bne.s   .waitscreen                     ; wait until screen is NOT ready
@@ -215,10 +240,9 @@ new68:          rte
 
 
 ;********** DRAWSCREEN *******
-; d7: x coord
 drawscreen:     movem.l a0-a6/d0-d7,-(sp)
 
-                ;move.w  statusdata+$0,d7                ; viewpointTL_x
+                move.w  statusdata+$0,d7                ; viewpointTL_x
                 move.w  d7,d6
                 lsr.w   #4,d6
                 mulu    #31,d6
@@ -374,8 +398,7 @@ drawscreen:     movem.l a0-a6/d0-d7,-(sp)
                 move.l  #(8<<16)+LINEBYTES-8,d3         ; d3: dest x / y incr
                 move.w  #$204,d2
                 swap    d2
-                ;move.w   (sp)+,d2                        ; d2.w: add pixelshift for viewpoint
-                move.w  statusdata+4,d2                 ; d2.w cursorTL_x
+                move.w  statusdata+4,d2                 ; d2.w pointerTL_x
                 add.w   (sp)+,d2                        ; d2.w: add pixelshift for viewpoint
                 move.w  d2,d4                           ; d4: pointer x absolute
 .nobump         and.w   #$f,d2                          ; d2: hop: source / op = NOT source AND target / (busy/hog/smudge/0/linenumber)/ (fxsr/nfsr/0/0/skew)
@@ -395,6 +418,12 @@ drawscreen:     movem.l a0-a6/d0-d7,-(sp)
                 and.w   #$fff0,d5
                 lsr.w   #1,d5
                 lea     0(a6,d5.w),a6                   ; a6: screen address for pointer
+                
+                move.w  statusdata+6,d5                 ; pointerTL_y
+                mulu    #LINEBYTES,d5
+                lea     0(a6,d5.w),a6                   ; a6: screen address for pointer
+                
+                
                 lea     pointerData,a5
                 ;move.l  #$20002,$20(a0)                ; src x / y incr (already set)
 
