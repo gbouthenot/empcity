@@ -59,7 +59,8 @@ SYSINIT:
                 lea     switchdata,a2
                 move.l  a0,(a2)+                        ; set current screen adr
                 clr.w   (a2)+                           ; next not ready
-                move.l  a1,(a2)+                        ; next adr
+                move.l  a1,(a2)+                        ; next adr buffer
+                clr.l   (a2)+                           ; next screen start
                 clr.l   (a2)+                           ; next line width offset, pixel shift, missed switch
 
                 IF      DEBUG==0
@@ -153,11 +154,11 @@ applydirection:
                 ; viewpointTL_y
                 sub.w   d5,d7
                 add.w   d4,d7
-                ;bge.s   .vpyposi
-                ;add.w   #SCENWIDTH,d7
-.vpyposi:       ;cmp.w   #SCENWIDTH,d7
-                ;blt.s   .vpyok
-                ;sub.w   #SCENWIDTH,d7
+                bge.s   .vpyposi
+                clr.w   d7
+.vpyposi:       cmp.w   #SCENHEIGHT-NBLOCKH*16,d7
+                ble.s   .vpyok
+                move.w  #SCENHEIGHT-NBLOCKH*16,d7
 .vpyok:         ; pointerTL_y
                 sub.w   d5,d6
                 sub.w   d5,d6
@@ -217,24 +218,24 @@ new70:          movem.l a0-a1/d0,-(sp)
                 tst.b   (a0)
                 bne.s   .ready
                 ; not ready
-                addq.w  #1,$c-5(a0)
+                addq.w  #1,$10-5(a0)
                 move.w  #$f00,$ffff8240.w
                 bra.s   .end70
 .ready:         sf      (a0)+                           ; set not ready
-                move.w  (a0)+,d0
+                move.w  $a-6(a0),d0
                 lea     $ffff8200.w,a1
                 move.b  d0,$1(a1)                       ; set high base
                 move.b  d0,$5(a1)                       ; set high counter
-                move.b  (a0),$3(a1)                     ; set mid base
-                move.b  (a0)+,$7(a1)                    ; set mid counter
-                move.b  (a0),$d(a1)                     ; set low base (last)
-                move.b  (a0)+,$9(a1)                    ; set low counter (last)
-                move.b  (a0)+,$f(a1)                    ; set line offset
-                move.b  (a0),$65(a1)                    ; set pixel shift
+                move.b  $c-6(a0),$3(a1)                 ; set mid base
+                move.b  $c-6(a0),$7(a1)                 ; set mid counter
+                move.b  $d-6(a0),$d(a1)                 ; set low base (last)
+                move.b  $d-6(a0),$9(a1)                 ; set low counter (last)
+                move.b  $e-6(a0),$f(a1)                 ; set line offset
+                move.b  $f-6(a0),$65(a1)                ; set pixel shift
 
-                move.l  0-11(a0),d0                     ; swap screen adrs
-                move.l  6-11(a0),0-11(a0)
-                move.l  d0,6-11(a0)
+                move.l  0-6(a0),d0                     ; swap screen adrs
+                move.l  $6-6(a0),0-6(a0)
+                move.l  d0,$6-6(a0)
 .end70:         movem.l  (sp)+,a0-a1/d0
 new68:          rte
 
@@ -263,7 +264,7 @@ drawscreen:     movem.l a0-a6/d0-d7,-(sp)
                 bra.s   .enddec
                 ENDIF
 .bothdec:       IF      DEBUG==0
-                move.w  d6,switchdata+$a                ; set nextlineoffset=0, next pixelshify=t
+                move.w  d6,switchdata+$e                ; set nextlineoffset=0, next pixelshify=t
                 ELSE
                 clr.b   $ffff820f.w
                 move.b  d6,$ffff8265.w
@@ -275,7 +276,17 @@ drawscreen:     movem.l a0-a6/d0-d7,-(sp)
 ;(sp).w: nb pixel shift
 
                 ; blit init
-                move.l  switchdata+$6,a6                ; a6: screen address
+                move.l  switchdata+$6,a6                ; a6: screen buffer address
+                move.w  statusdata+$2,d5
+                move.w  d5,d4
+                and.w   #$f,d5
+                mulu.w  #LINEBYTES,d5
+                lea     0(a6,d5.w),a4
+                move.l  a4,switchdata+$a                ; save screen start addr
+                and.w   #$fff0,d4                       ; tilemap is .L array
+                lsr.w   #2,d4
+                lea     0(a5,d4.w),a5                   ; update tilemap base
+
                 lea     endmasks(pc),a4
                 add.w   d7,d7
                 move.w  0(a4,d7.w),d7                   ; d7.w: mask for last column
@@ -286,6 +297,7 @@ drawscreen:     movem.l a0-a6/d0-d7,-(sp)
 ;a0: blitter base
 ;a4: tiles
 ;a5: current tilemap
+;a6: screen buffer addr
 ;(sp).w: nb pixel shift
 
                 ; fill blitter halftone with last column mask
@@ -412,7 +424,7 @@ drawscreen:     movem.l a0-a6/d0-d7,-(sp)
                 addq.w  #1,d0
                 subq.w  #8,d3
 
-.noskew:        move.l  switchdata+6,a6                 ; a6: screen adress
+.noskew:        move.l  switchdata+$a,a6                 ; a6: screen start address
 ;d4: pointer x absolute
                 move.w  d4,d5
                 and.w   #$fff0,d5
@@ -465,7 +477,7 @@ drawscreen:     movem.l a0-a6/d0-d7,-(sp)
 
                 movem.l (sp)+,a0-a6/d0-d7
                 move.w  #$00f,$ffff8240.w
-                sf      switchdata+5
+                sf      switchdata+$5
                 rts
 
 
@@ -508,13 +520,14 @@ oldpal:         ds.w    16
                 ds.l    1                       ; old $68
                 ds.l    1                       ; old $70
 
-switchdata:     ds.l    1                       ; $0 current displayed screen
-                ds.b    1                       ; $4 0
-                ds.b    1                       ; $5 next screen ready ? 0=no
-                ds.l    1                       ; $6 next screen buffer
-                ds.b    1                       ; $a next line width offset
-                ds.b    1                       ; $b next pixel shift
-                ds.w    1                       ; $c number of missed switches
+switchdata:     ds.l    1                       ; $00 current displayed screen buffer
+                ds.b    1                       ; $04 0
+                ds.b    1                       ; $05 next screen ready ? 0=no
+                ds.l    1                       ; $06 next screen buffer
+                ds.l    1                       ; $0a next screen start addr
+                ds.b    1                       ; $0e next line width offset
+                ds.b    1                       ; $0f next pixel shift
+                ds.w    1                       ; $10 number of missed switches
 
 statusdata:     ds.w    1                       ; $0 viewpointTL_x (0 -> SCENWIDTH-1)
                 ds.w    1                       ; $2 viewpointTL_y (0 -> 496-SCHENHEIGHT)
@@ -528,4 +541,5 @@ statusdata:     ds.w    1                       ; $0 viewpointTL_x (0 -> SCENWID
 tilemapPre:     ds.b    (tilemap_end-tilemap)*2
 
 screen1:        ds.b    200*336/2
+                ds.b    14*336/2
 screen2:        ds.b    192*336/2
