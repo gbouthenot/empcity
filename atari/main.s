@@ -1,6 +1,7 @@
                 mc68000
 LINEBYTES       EQU     168
-NBLOCKX         EQU     17                               ; nb horizontal blocks 17 / 6 for measure
+NBLOCKW         EQU     17                               ; nb horizontal blocks 17 / 6 for measure
+NBLOCKH         EQU     12                               ; nb vertical blocks. 12 is hardcoded in display
 DEBUG           EQU     0
 SCENWIDTH       EQU     1936
 SCENHEIGHT      EQU     496
@@ -71,14 +72,16 @@ SYSINIT:
 
 ; MAIN LOOP
 mainloopInit:   lea     statusdata,a0
+                ; init
                 clr.l   (a0)+
                 clr.l   (a0)+
                 clr.l   (a0)+
-                
+                clr.l   (a0)+
+
                 move.l  $4ba.w,d1                       ; measure start
 mainloop:
                 lea     statusdata,a0
-                
+
 .keyloop:       move.b  #1,d2                           ; d2: default 1 for key pressed, 0 if key is depressed
                 btst    #7,$fffffc00.w
                 beq.s   .endkey
@@ -87,16 +90,16 @@ mainloop:
                 and.b   #$7f,d1                         ; d1: key code without pressed/depressed
                 cmp.b   #$39+$80,d0                     ; space depressed ?
                 beq.s   mainloopexit
-                lea     $4(a0),a1                       ; up
+                lea     $8(a0),a1                       ; up
                 cmp.b   #$48,d1
                 beq.s   .arrowkey
-                lea     $6(a0),a1                       ; bottom
+                lea     $a(a0),a1                       ; bottom
                 cmp.b   #$50,d1
                 beq.s   .arrowkey
-                lea     $8(a0),a1                       ; left
+                lea     $c(a0),a1                       ; left
                 cmp.b   #$4b,d1
                 beq.s   .arrowkey
-                lea     $a(a0),a1                       ; right
+                lea     $e(a0),a1                       ; right
                 cmp.b   #$4d,d1
                 beq.s   .arrowkey
                 bra.s   .keyloop
@@ -112,15 +115,22 @@ mainloop:
 applydirection:
 ; apply top / bottom / left / right directions
 ;a0: statusdata
-                move.w  (a0),d7
-                sub.w   $8(a0),d7
-                add.w   $a(a0),d7
+                ; handle left / right
+                move.w  (a0),d7                         ; d7: viewpointTL_x
+                move.w  4(a0),d6                        ; d6: cursorTL_x
+                sub.w   $c(a0),d7
+                sub.w   $c(a0),d6
+                sub.w   $c(a0),d6
+                add.w   $e(a0),d7
+                add.w   $e(a0),d6
+                add.w   $e(a0),d6
                 bge.s   .xpositive
                 add.w   #SCENWIDTH,d7
 .xpositive      cmp.w   #SCENWIDTH,d7
                 blt.s   .xok
                 sub.w   #SCENWIDTH,d7
 .xok:           move.w  d7,(a0)
+                ;move.w  d6,4(a0)
 
 ;d7: viewpoint x
 .waitscreen:    IF      DEBUG==0
@@ -195,6 +205,7 @@ new68:          rte
 ; d7: x coord
 drawscreen:     movem.l a0-a6/d0-d7,-(sp)
 
+                ;move.w  statusdata+$0,d7                ; viewpointTL_x
                 move.w  d7,d6
                 lsr.w   #4,d6
                 mulu    #31,d6
@@ -203,7 +214,6 @@ drawscreen:     movem.l a0-a6/d0-d7,-(sp)
                 lea     tilemapPre,a5
                 adda.l  d6,a5                           ; a5: tilemap
 
-                lea     switchdata,a2
                 and.w   #$f,d7
                 move.w  d7,-(sp)
                 move.w  d7,d6
@@ -216,7 +226,7 @@ drawscreen:     movem.l a0-a6/d0-d7,-(sp)
                 bra.s   .enddec
                 ENDIF
 .bothdec:       IF      DEBUG==0
-                move.w  d6,$a(a2)                       ; set nextlineoffset=0, next pixelshify=t
+                move.w  d6,switchdata+$a                ; set nextlineoffset=0, next pixelshify=t
                 ELSE
                 clr.b   $ffff820f.w
                 move.b  d6,$ffff8265.w
@@ -225,11 +235,10 @@ drawscreen:     movem.l a0-a6/d0-d7,-(sp)
 
 ;d7: nb pixel shift
 ;a5: current tilemap
-;a2: switchdata
 ;(sp).w: nb pixel shift
 
                 ; blit init
-                move.l  6(a2),a6                        ; a6: screen address
+                move.l  switchdata+$6,a6                ; a6: screen address
                 lea     endmasks(pc),a4
                 add.w   d7,d7
                 move.w  0(a4,d7.w),d7                   ; d7.w: mask for last column
@@ -238,7 +247,6 @@ drawscreen:     movem.l a0-a6/d0-d7,-(sp)
 
 ;d7: mask for last column
 ;a0: blitter base
-;a2: switchdata
 ;a4: tiles
 ;a5: current tilemap
 ;(sp).w: nb pixel shift
@@ -266,7 +274,7 @@ drawscreen:     movem.l a0-a6/d0-d7,-(sp)
                 move.w  #4,$36(a0)                      ; xCount=4 : copy 4 words = 4 bitplanes
                 move.l  #($203<<16)+0,$3a(a0)           ; hop: source / op = source / (busy/hog/smudge/0/linenumber)/ (fxsr/nfsr/0/0/skew)
 
-                moveq   #NBLOCKX-1,d7                   ; number of columns. -1 cause last will me masked
+                moveq   #NBLOCKW-1,d7                   ; number of columns. -1 cause last will me masked
                 lea     $24(a0),a1
                 lea     $38(a0),a2
                 lea     $3c(a0),a3
@@ -343,17 +351,21 @@ drawscreen:     movem.l a0-a6/d0-d7,-(sp)
                 move.b  d1,(a3)
                 ENDR
 
-
 ; show pointer
+
 ;a0: blitter base
 ;a2: $ff8a38: yCount
-;a3: $dd8a3c: BUSY/hop/smudge/0/linenumber
+;a3: $ff8a3c: BUSY/hop/smudge/0/linenumber
 ;(sp).w: nb pixel shift
                 moveq   #2,d0                           ; d0=xCount=2 : copy 2 words
                 move.l  #(8<<16)+LINEBYTES-8,d3         ; d3: dest x / y incr
                 move.w  #$204,d2
                 swap    d2
-                move.w  (sp)+,d2                        ; d2: hop: source / op = NOT source AND target / (busy/hog/smudge/0/linenumber)/ (fxsr/nfsr/0/0/skew)
+                ;move.w   (sp)+,d2                        ; d2.w: add pixelshift for viewpoint
+                move.w  statusdata+4,d2                 ; d2.w cursorTL_x
+                add.w   (sp)+,d2                        ; d2.w: add pixelshift for viewpoint
+                move.w  d2,d4                           ; d4: pointer x absolute
+.nobump         and.w   #$f,d2                          ; d2: hop: source / op = NOT source AND target / (busy/hog/smudge/0/linenumber)/ (fxsr/nfsr/0/0/skew)
                 beq.s   .noskew
 ;if skew>0:
 ; - xcount + 1
@@ -365,6 +377,12 @@ drawscreen:     movem.l a0-a6/d0-d7,-(sp)
                 subq.w  #8,d3
 
 .noskew:        move.l  switchdata+6,a6                 ; a6: screen adress
+;d4: pointer x absolute
+                move.w  d4,d5
+                and.w   #$fff0,d5
+                move.b  d5,d2                           ; copy skew
+                lsr.w   #1,d5
+                lea     0(a6,d5.w),a6                   ; a6: screen address for pointer
                 lea     pointerData,a5
                 ;move.l  #$20002,$20(a0)                ; src x / y incr (already set)
 
@@ -373,6 +391,15 @@ drawscreen:     movem.l a0-a6/d0-d7,-(sp)
                 move.l  d2,$3a(a0)                      ; hop: source / op / (busy/hog/smudge/0/linenumber)/ (fxsr/nfsr/0/0/skew)
                 moveq   #32,d0                          ; for yCount
 
+
+
+; a5: pointerdata*
+; a6: screen*
+; a3: BUSY
+; a2: yCount
+; a0: blitbase
+; d0: yCount
+; d1: BUSY
                 ; mask pixels in black
                 REPT 3
                 move.l  a5,$24(a0)                      ; set src adr
@@ -399,6 +426,11 @@ drawscreen:     movem.l a0-a6/d0-d7,-(sp)
                 move.w  #$00f,$ffff8240.w
                 sf      switchdata+5
                 rts
+
+
+
+
+
 
 preTilemap:     lea     tilemap,a0
                 lea     tilemapPre,a1
@@ -443,12 +475,14 @@ switchdata:     ds.l    1                       ; $0 current displayed screen
                 ds.b    1                       ; $b next pixel shift
                 ds.w    1                       ; $c number of missed switches
 
-statusdata:     ds.w    1                       ; $0 viewpoint x (0 -> SCENWIDTH-1)
-                ds.w    1                       ; $2 viewpoint y (0 -> 496-SCHENHEIGHT)
-                ds.w    1                       ; $4 key up if !=0
-                ds.w    1                       ; $6 key down
-                ds.w    1                       ; $8 key left
-                ds.w    1                       ; $a key right
+statusdata:     ds.w    1                       ; $0 viewpointTL_x (0 -> SCENWIDTH-1)
+                ds.w    1                       ; $2 viewpointTL_y (0 -> 496-SCHENHEIGHT)
+                ds.w    1                       ; $4 pointerTL_x (0 -> NBLOCKW*16 - 31)
+                ds.w    1                       ; $6 pointerTL_y (0 -> NBLOCKH*16 - 31)
+                ds.w    1                       ; $8 key up if !=0
+                ds.w    1                       ; $a key down
+                ds.w    1                       ; $c key left
+                ds.w    1                       ; $e key right
 
 tilemapPre:     ds.b    (tilemap_end-tilemap)*2
 
