@@ -89,7 +89,7 @@ mainloop:
                 move.b  d0,d1
                 and.b   #$7f,d1                         ; d1: key code without pressed/depressed
                 cmp.b   #$39+$80,d0                     ; space depressed ?
-                beq.s   mainloopexit
+                beq     mainloopexit
                 lea     $8(a0),a1                       ; up
                 cmp.b   #$48,d1
                 beq.s   .arrowkey
@@ -118,19 +118,32 @@ applydirection:
                 ; handle left / right
                 move.w  (a0),d7                         ; d7: viewpointTL_x
                 move.w  4(a0),d6                        ; d6: cursorTL_x
-                sub.w   $c(a0),d7
-                sub.w   $c(a0),d6
-                sub.w   $c(a0),d6
-                add.w   $e(a0),d7
-                add.w   $e(a0),d6
-                add.w   $e(a0),d6
-                bge.s   .xpositive
+                move.w  $c(a0),d5                       ; d5: left
+                move.w  $e(a0),d4                       ; d4: right
+                add.w   d4,d4                           ; d4: right double speed
+                add.w   d5,d5                           ; d5: left double speed
+                ; viewpointTL_x
+                sub.w   d5,d7
+                add.w   d4,d7
+                bge.s   .vpxposi
                 add.w   #SCENWIDTH,d7
-.xpositive      cmp.w   #SCENWIDTH,d7
-                blt.s   .xok
+.vpxposi:       cmp.w   #SCENWIDTH,d7
+                blt.s   .vpxok
                 sub.w   #SCENWIDTH,d7
-.xok:           move.w  d7,(a0)
-                ;move.w  d6,4(a0)
+.vpxok:         ; cap cursorTL_x
+                sub.w   d5,d6
+                sub.w   d5,d6
+                add.w   d4,d6
+                add.w   d4,d6
+                bge.s   .pxposi
+                clr.w   d6
+.pxposi:        cmp.w   #(NBLOCKW-1)*16-32+4,d6
+                ble.s   .pxok
+                move.w  #(NBLOCKW-1)*16-32+4,d6
+.pxok:
+
+                move.w  d7,(a0)
+                move.w  d6,4(a0)
 
 ;d7: viewpoint x
 .waitscreen:    IF      DEBUG==0
@@ -215,9 +228,9 @@ drawscreen:     movem.l a0-a6/d0-d7,-(sp)
                 adda.l  d6,a5                           ; a5: tilemap
 
                 and.w   #$f,d7
-                move.w  d7,-(sp)
+                move.w  d7,-(sp)                        ; stack pixelshift
                 move.w  d7,d6
-                bne.s   .bothdec                        ; d6=xxyy: xx:offset(0), yy: pixelshift
+                bne.s   .bothdec                        ; d6=xxyy: xx:nextLineOffset=0, yy: pixelshift
 .zerodec:       IF      DEBUG==0
                 move.w  #$400,d6
                 ELSE
@@ -380,7 +393,6 @@ drawscreen:     movem.l a0-a6/d0-d7,-(sp)
 ;d4: pointer x absolute
                 move.w  d4,d5
                 and.w   #$fff0,d5
-                move.b  d5,d2                           ; copy skew
                 lsr.w   #1,d5
                 lea     0(a6,d5.w),a6                   ; a6: screen address for pointer
                 lea     pointerData,a5
